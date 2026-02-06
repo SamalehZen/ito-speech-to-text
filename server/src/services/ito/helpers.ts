@@ -5,10 +5,14 @@ import { DEFAULT_ADVANCED_SETTINGS } from '../../constants/generated-defaults.js
 import { ItoMode } from '../../generated/ito_pb.js'
 import {
   END_APP_NAME_MARKER,
+  END_BROWSER_DOMAIN_MARKER,
+  END_BROWSER_URL_MARKER,
   END_CONTEXT_MARKER,
   END_USER_COMMAND_MARKER,
   END_WINDOW_TITLE_MARKER,
   START_APP_NAME_MARKER,
+  START_BROWSER_DOMAIN_MARKER,
+  START_BROWSER_URL_MARKER,
   START_CONTEXT_MARKER,
   START_USER_COMMAND_MARKER,
   START_WINDOW_TITLE_MARKER,
@@ -25,6 +29,12 @@ export function createUserPromptWithContext(
     }
     if (context.appName) {
       contextPrompt += `\n${START_APP_NAME_MARKER}\n${context.appName}\n${END_APP_NAME_MARKER}`
+    }
+    if (context.browserUrl) {
+      contextPrompt += `\n${START_BROWSER_URL_MARKER}\n${context.browserUrl}\n${END_BROWSER_URL_MARKER}`
+    }
+    if (context.browserDomain) {
+      contextPrompt += `\n${START_BROWSER_DOMAIN_MARKER}\n${context.browserDomain}\n${END_BROWSER_DOMAIN_MARKER}`
     }
   }
   const userPrompt = `

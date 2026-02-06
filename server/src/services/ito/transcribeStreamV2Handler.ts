@@ -112,6 +112,8 @@ export class TranscribeStreamV2Handler {
         windowTitle: mergedConfig.context?.windowTitle || '',
         appName: mergedConfig.context?.appName || '',
         contextText: mergedConfig.context?.contextText || '',
+        browserUrl: mergedConfig.context?.browserUrl || '',
+        browserDomain: mergedConfig.context?.browserDomain || '',
       }
 
       const mode = mergedConfig.context?.mode ?? detectItoMode(transcript)
@@ -430,6 +432,14 @@ export class TranscribeStreamV2Handler {
           updateCtx.contextText !== ''
             ? updateCtx.contextText
             : baseCtx.contextText,
+        browserUrl:
+          updateCtx.browserUrl !== ''
+            ? updateCtx.browserUrl
+            : baseCtx.browserUrl,
+        browserDomain:
+          updateCtx.browserDomain !== ''
+            ? updateCtx.browserDomain
+            : baseCtx.browserDomain,
       }
     }
 

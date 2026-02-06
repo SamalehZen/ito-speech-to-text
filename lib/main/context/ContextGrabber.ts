@@ -2,6 +2,7 @@ import { ItoMode } from '@/app/generated/ito_pb'
 import { DictionaryTable } from '../sqlite/repo'
 import { getCurrentUserId, getAdvancedSettings } from '../store'
 import { getActiveWindow } from '../../media/active-application'
+import { getBrowserUrl } from '../../media/browser-url'
 import {
   getSelectedTextString,
   getCursorContext,
@@ -16,6 +17,8 @@ export interface ContextData {
   windowTitle: string
   appName: string
   contextText: string
+  browserUrl: string | null
+  browserDomain: string | null
   advancedSettings: ReturnType<typeof getAdvancedSettings>
 }
 
@@ -39,6 +42,13 @@ export class ContextGrabber {
       async () => await this.getWindowContext(),
     )
 
+    // Get browser URL if active app is a browser
+    const { url: browserUrl, domain: browserDomain } =
+      await timingCollector.timeAsync(
+        TimingEventName.BROWSER_URL_GATHER,
+        async () => await getBrowserUrl(),
+      )
+
     // Get selected text if in EDIT mode
     const contextText = await this.getContextText(mode)
 
@@ -52,6 +62,8 @@ export class ContextGrabber {
       windowTitle,
       appName,
       contextText,
+      browserUrl,
+      browserDomain,
       advancedSettings,
     }
   }
