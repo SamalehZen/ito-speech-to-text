@@ -10,31 +10,19 @@ import { useOnboardingStore } from '@/app/store/useOnboardingStore'
 
 const AUTH_DISABLED = import.meta.env.VITE_AUTH0_DOMAIN === 'disabled'
 
-export const useAuth = () => {
-  if (AUTH_DISABLED) {
-    return {
-      isAuthenticated: true,
-      isLoading: false,
-      error: null,
-      authUser: {
-        id: 'local-user',
-        email: 'local@ito.app',
-        name: 'Local User',
-        picture: undefined,
-        provider: 'local',
-        lastSignInAt: new Date().toISOString(),
-      } as AuthUser,
-      tokens: null,
-      loginWithGoogle: async () => {},
-      loginWithApple: async () => {},
-      loginWithDatabase: async () => ({ success: true }),
-      signupWithDatabase: async () => ({ success: true }),
-      logoutUser: async () => {},
-      refreshAuth: async () => {},
-      getAccessToken: async () => 'local-token',
-    }
-  }
+const noopAsync = async () => {}
+const noopAsyncSuccess = async () => ({ success: true as const })
 
+const localUser: AuthUser = {
+  id: 'local-user',
+  email: 'local@ito.app',
+  name: 'Local User',
+  picture: undefined,
+  provider: 'local',
+  lastSignInAt: new Date().toISOString(),
+}
+
+export const useAuth = () => {
   const {
     logout,
     user,
@@ -748,6 +736,28 @@ export const useAuth = () => {
       ;(window as any).__authTokenListenerSetup = false
     }
   }, [logout, clearAuth, auth0IsAuthenticated, authUser, logoutUser])
+
+  if (AUTH_DISABLED) {
+    return {
+      user: localUser,
+      isAuthenticated: true,
+      isLoading: false,
+      error: null,
+      loginWithGoogle: noopAsync,
+      loginWithMicrosoft: noopAsync,
+      loginWithApple: noopAsync,
+      loginWithGitHub: noopAsync,
+      loginWithEmail: noopAsync,
+      loginWithEmailPassword: noopAsyncSuccess,
+      signupWithEmail: noopAsyncSuccess,
+      createDatabaseUser: noopAsyncSuccess,
+      loginWithSelfHosted: noopAsync,
+      logoutUser: noopAsync,
+      getAccessToken: async () => 'local-token',
+      getIdTokenClaims,
+      refreshTokens: noopAsync,
+    }
+  }
 
   return {
     // Auth state
