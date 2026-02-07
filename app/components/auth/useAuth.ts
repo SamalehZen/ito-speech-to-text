@@ -31,10 +31,11 @@ export function useAuth() {
   const {
     user: storedUser,
     tokens,
-    setAuth,
+    setAuthData,
     clearAuth,
     isAuthenticated: storeIsAuthenticated,
     setName,
+    setSelfHostedMode,
   } = useAuthStore()
 
   const { resetState: resetMainState } = useMainStore()
@@ -65,21 +66,21 @@ export function useAuth() {
   useEffect(() => {
     if (AUTH_DISABLED) {
       if (!storeIsAuthenticated) {
-        setAuth(localUser, localTokens)
+        setSelfHostedMode()
       }
       return
     }
 
     if (session && supabaseUser && authUser) {
       const authTokens: AuthTokens = {
-        accessToken: session.access_token,
-        idToken: session.access_token,
-        refreshToken: session.refresh_token || '',
-        expiresAt: session.expires_at ? session.expires_at * 1000 : Date.now() + 3600 * 1000,
+        access_token: session.access_token,
+        id_token: session.access_token,
+        refresh_token: session.refresh_token || '',
+        expires_at: session.expires_at ? session.expires_at * 1000 : Date.now() + 3600 * 1000,
       }
-      setAuth(authUser, authTokens)
+      setAuthData(authTokens, authUser, 'email')
     }
-  }, [session, supabaseUser, authUser, setAuth, storeIsAuthenticated])
+  }, [session, supabaseUser, authUser, setAuthData, storeIsAuthenticated, setSelfHostedMode])
 
   const signupWithEmail = useCallback(
     async (email: string, password: string, fullName?: string) => {
@@ -221,9 +222,9 @@ export function useAuth() {
 
   const loginWithSelfHosted = useCallback(async () => {
     if (!supabase) {
-      setAuth(localUser, localTokens)
+      setSelfHostedMode()
     }
-  }, [setAuth])
+  }, [setSelfHostedMode])
 
   if (AUTH_DISABLED) {
     return {
