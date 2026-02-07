@@ -15,7 +15,7 @@ permissions:
   contents: write
 
 env:
-  ITO_ENV: prod
+  ITO_ENV: dev
   VITE_AUTH0_DOMAIN: ${{ vars.VITE_AUTH0_DOMAIN || 'disabled' }}
   VITE_AUTH0_CLIENT_ID: ${{ vars.VITE_AUTH0_CLIENT_ID || 'disabled' }}
   VITE_AUTH0_AUDIENCE: ${{ vars.VITE_AUTH0_AUDIENCE || 'disabled' }}
@@ -23,7 +23,6 @@ env:
   VITE_POSTHOG_API_KEY: ${{ vars.VITE_POSTHOG_API_KEY || '' }}
   VITE_POSTHOG_HOST: ${{ vars.VITE_POSTHOG_HOST || '' }}
   VITE_UPDATER_BUCKET: ${{ vars.VITE_UPDATER_BUCKET || '' }}
-  VITE_ITO_VERSION: ${{ github.ref_name }}
 
 jobs:
   build-mac:
@@ -31,6 +30,14 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Get version from tag
+        id: version
+        run: |
+          VERSION="${GITHUB_REF_NAME:-${{ github.event.inputs.version }}}"
+          VERSION_NO_V="${VERSION#v}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "version_no_v=$VERSION_NO_V" >> $GITHUB_OUTPUT
 
       - name: Set up Bun
         uses: oven-sh/setup-bun@v1
@@ -50,103 +57,29 @@ jobs:
         run: ./build-binaries.sh --mac --x64
 
       - name: Build Electron app
+        env:
+          VITE_ITO_VERSION: ${{ steps.version.outputs.version_no_v }}
         run: bun run electron-vite build
 
       - name: Package macOS app (unsigned)
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
-          VITE_ITO_ENV: prod
+          VITE_ITO_ENV: dev
         run: |
-          bunx electron-builder --config electron-builder.config.js --mac dmg zip --universal --publish=never
+          bunx electron-builder --config electron-builder.config.js --mac dmg --universal --publish=never
 
-      - name: Rename output files
-        run: |
-          cd dist
-          for f in *.dmg; do
-            [ -f "$f" ] && mv "$f" "Ito-macOS-universal.dmg"
-          done
-          for f in *.zip; do
-            [ -f "$f" ] && mv "$f" "Ito-macOS-universal.zip"
-          done
+      - name: List output files
+        run: ls -la dist/
 
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4
         with:
           name: macos-build
-          path: |
-            dist/*.dmg
-            dist/*.zip
-          retention-days: 5
-
-  build-windows:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Bun
-        uses: oven-sh/setup-bun@v1
-
-      - name: Install dependencies
-        run: bun install
-
-      - name: Set up Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: 'x86_64-pc-windows-msvc'
-
-      - name: Install cross-compilation tools
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y mingw-w64
-
-      - name: Build native modules for Windows
-        run: ./build-binaries.sh --windows
-
-      - name: Build Electron app
-        run: bun run electron-vite build
-
-      - name: Package Windows app (Docker)
-        env:
-          CSC_IDENTITY_AUTO_DISCOVERY: false
-          SKIP_SIGNING: true
-          VITE_ITO_ENV: prod
-        run: |
-          docker run --rm --platform linux/amd64 \
-            --env CSC_IDENTITY_AUTO_DISCOVERY=false \
-            --env SKIP_SIGNING=true \
-            --env VITE_ITO_VERSION="${VITE_ITO_VERSION}" \
-            --env VITE_AUTH0_DOMAIN="${VITE_AUTH0_DOMAIN}" \
-            --env VITE_AUTH0_CLIENT_ID="${VITE_AUTH0_CLIENT_ID}" \
-            --env VITE_AUTH0_AUDIENCE="${VITE_AUTH0_AUDIENCE}" \
-            --env VITE_GRPC_BASE_URL="${VITE_GRPC_BASE_URL}" \
-            --env ITO_ENV=prod \
-            -v "$(pwd)":/project \
-            electronuserland/builder:wine \
-            bash -c "
-              curl -fsSL https://bun.sh/install | bash
-              export PATH=\"/root/.bun/bin:\$PATH\"
-              cd /project
-              bun install
-              bunx electron-builder --config electron-builder.config.js --win --x64 --publish=never
-            "
-
-      - name: Rename output files
-        run: |
-          cd dist
-          for f in *.exe; do
-            [ -f "$f" ] && mv "$f" "Ito-Windows-x64-Setup.exe"
-          done
-
-      - name: Upload Windows artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: windows-build
-          path: dist/*.exe
+          path: dist/*.dmg
           retention-days: 5
 
   release:
-    needs: [build-mac, build-windows]
+    needs: [build-mac]
     runs-on: ubuntu-latest
     steps:
       - name: Download all artifacts
@@ -166,17 +99,13 @@ jobs:
           prerelease: false
           files: |
             artifacts/macos-build/*.dmg
-            artifacts/macos-build/*.zip
-            artifacts/windows-build/*.exe
           body: |
             ## Ito ${{ github.ref_name || github.event.inputs.version }}
             
             ### Downloads
-            - **macOS (Universal)**: `Ito-macOS-universal.dmg`
-            - **Windows (x64)**: `Ito-Windows-x64-Setup.exe`
+            - **macOS (Universal)**: Download the DMG file below
             
             ### Installation
             - **macOS**: Download the DMG, open it, and drag Ito to Applications
-            - **Windows**: Download and run the Setup.exe installer
             
-            > ⚠️ These builds are unsigned. You may need to allow the app in your security settings.
+            > ⚠️ This build is unsigned. You may need to allow the app in System Settings → Privacy & Security.
