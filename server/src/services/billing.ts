@@ -2,7 +2,6 @@ import { FastifyInstance } from 'fastify'
 import Stripe from 'stripe'
 import { SubscriptionsRepository, TrialsRepository } from '../db/repo.js'
 import {
-  getAuth0ManagementToken,
   getUserInfoFromAuth0,
 } from '../auth/auth0Helpers.js'
 
@@ -31,15 +30,22 @@ export const registerBillingRoutes = async (
 ) => {
   const { requireAuth } = options
 
-  const STRIPE_SECRET_KEY = getEnv('STRIPE_SECRET_KEY')
-  const STRIPE_PRICE_ID = getEnv('STRIPE_PRICE_ID')
-  const STRIPE_PUBLIC_BASE_URL = getEnv('STRIPE_PUBLIC_BASE_URL') // e.g., http://localhost:3000 or https://api.domain
+  const FREE_MODE = process.env.FREE_MODE === 'true'
 
-  const stripe = new Stripe(STRIPE_SECRET_KEY)
+  const STRIPE_SECRET_KEY = FREE_MODE ? null : getEnv('STRIPE_SECRET_KEY')
+  const STRIPE_PRICE_ID = FREE_MODE ? null : getEnv('STRIPE_PRICE_ID')
+  const STRIPE_PUBLIC_BASE_URL = FREE_MODE ? null : getEnv('STRIPE_PUBLIC_BASE_URL')
+
+  const stripe = STRIPE_SECRET_KEY ? new Stripe(STRIPE_SECRET_KEY) : null
 
   fastify.post('/billing/checkout', async (request, reply) => {
     console.log('billing/checkout', request.body)
     try {
+      if (FREE_MODE || !stripe) {
+        reply.send({ success: true, message: 'Free mode enabled - no payment required' })
+        return
+      }
+
       const userSub = (requireAuth && (request as any).user?.sub) || undefined
       if (!userSub) {
         reply.code(401).send({ success: false, error: 'Unauthorized' })
@@ -79,6 +85,11 @@ export const registerBillingRoutes = async (
 
   fastify.post('/billing/confirm', async (request, reply) => {
     try {
+      if (FREE_MODE || !stripe) {
+        reply.send({ success: true, pro_status: 'active_pro' })
+        return
+      }
+
       const userSub = (requireAuth && (request as any).user?.sub) || undefined
       if (!userSub) {
         reply.code(401).send({ success: false, error: 'Unauthorized' })
@@ -175,6 +186,11 @@ export const registerBillingRoutes = async (
 
   fastify.post('/billing/cancel', async (request, reply) => {
     try {
+      if (FREE_MODE || !stripe) {
+        reply.send({ success: true, message: 'Free mode enabled - nothing to cancel' })
+        return
+      }
+
       const userSub = (requireAuth && (request as any).user?.sub) || undefined
       if (!userSub) {
         reply.code(401).send({ success: false, error: 'Unauthorized' })
@@ -236,6 +252,21 @@ export const registerBillingRoutes = async (
 
   fastify.get('/billing/status', async (request, reply) => {
     try {
+      if (FREE_MODE) {
+        reply.send({
+          success: true,
+          pro_status: 'active_pro',
+          trial: {
+            trialDays: 0,
+            trialStartAt: null,
+            daysLeft: 0,
+            isTrialActive: false,
+            hasCompletedTrial: true,
+          },
+        })
+        return
+      }
+
       const userSub = (requireAuth && (request as any).user?.sub) || undefined
       if (!userSub) {
         reply.code(401).send({ success: false, error: 'Unauthorized' })
@@ -323,6 +354,11 @@ export const registerBillingRoutes = async (
 
   fastify.post('/billing/reactivate', async (request, reply) => {
     try {
+      if (FREE_MODE || !stripe) {
+        reply.send({ success: true, message: 'Free mode enabled' })
+        return
+      }
+
       const userSub = (requireAuth && (request as any).user?.sub) || undefined
       if (!userSub) {
         reply.code(401).send({ success: false, error: 'Unauthorized' })

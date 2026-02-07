@@ -1,0 +1,87 @@
+services:
+  - type: web
+    name: ito-server
+    runtime: node
+    region: frankfurt
+    plan: starter
+    rootDir: server
+    buildCommand: |
+      curl -fsSL https://bun.sh/install | bash
+      export PATH="$HOME/.bun/bin:$PATH"
+      bun install
+      bun run build
+    startCommand: node dist/index.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        fromService:
+          type: web
+          name: ito-server
+          property: port
+      - key: DB_HOST
+        fromDatabase:
+          name: ito-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: ito-db
+          property: port
+      - key: DB_USER
+        fromDatabase:
+          name: ito-db
+          property: user
+      - key: DB_PASS
+        fromDatabase:
+          name: ito-db
+          property: password
+      - key: DB_NAME
+        fromDatabase:
+          name: ito-db
+          property: database
+      - key: DATABASE_URL
+        fromDatabase:
+          name: ito-db
+          property: connectionString
+      - key: DB_SSL
+        value: "true"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: IP_SALT
+        generateValue: true
+      - key: REQUIRE_AUTH
+        value: "false"
+      - key: SHOW_CLIENT_LOGS
+        value: "false"
+      - key: SHOW_ALL_REQUEST_LOGS
+        value: "false"
+      - key: GROQ_API_KEY
+        sync: false
+      - key: CEREBRAS_API_KEY
+        sync: false
+      - key: BLOB_STORAGE_BUCKET
+        value: ito-blob-storage
+      - key: TIMING_BUCKET
+        value: ito-timing-storage
+      - key: AWS_REGION
+        value: auto
+      - key: S3_ENDPOINT
+        value: https://7290bd6da37fcfa7fab8881aad63ba39.r2.cloudflarestorage.com
+      - key: S3_ACCESS_KEY_ID
+        sync: false
+      - key: S3_SECRET_ACCESS_KEY
+        sync: false
+      - key: S3_FORCE_PATH_STYLE
+        value: "true"
+      - key: APP_PROTOCOL
+        value: ito
+      - key: FREE_MODE
+        value: "true"
+
+databases:
+  - name: ito-db
+    region: frankfurt
+    plan: starter
+    databaseName: itodb
+    user: itouser
