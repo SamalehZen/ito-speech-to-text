@@ -8,7 +8,33 @@ import { analytics, ANALYTICS_EVENTS } from '../analytics'
 import { STORE_KEYS } from '../../../lib/constants/store-keys'
 import { useOnboardingStore } from '@/app/store/useOnboardingStore'
 
+const AUTH_DISABLED = import.meta.env.VITE_AUTH0_DOMAIN === 'disabled'
+
 export const useAuth = () => {
+  if (AUTH_DISABLED) {
+    return {
+      isAuthenticated: true,
+      isLoading: false,
+      error: null,
+      authUser: {
+        id: 'local-user',
+        email: 'local@ito.app',
+        name: 'Local User',
+        picture: undefined,
+        provider: 'local',
+        lastSignInAt: new Date().toISOString(),
+      } as AuthUser,
+      tokens: null,
+      loginWithGoogle: async () => {},
+      loginWithApple: async () => {},
+      loginWithDatabase: async () => ({ success: true }),
+      signupWithDatabase: async () => ({ success: true }),
+      logoutUser: async () => {},
+      refreshAuth: async () => {},
+      getAccessToken: async () => 'local-token',
+    }
+  }
+
   const {
     logout,
     user,
