@@ -8,18 +8,5 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
-      - key: DB_SSL
-        value: "true"
-      - key: SECRET_KEY
-        generateValue: true
-      - key: REQUIRE_AUTH
-        value: "false"
       - key: FREE_MODE
         value: "true"
-      - key: GROQ_API_KEY
-        sync: false
-
-databases:
-  - name: ito-db
-    databaseName: itodb
-    user: itouser
