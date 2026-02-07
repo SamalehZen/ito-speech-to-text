@@ -59,6 +59,8 @@ jobs:
       - name: Build Electron app
         env:
           VITE_ITO_VERSION: ${{ steps.version.outputs.version_no_v }}
+          VITE_ITO_ENV: dev
+          ITO_ENV: dev
         run: bun run electron-vite build
 
       - name: Package macOS app (unsigned)
@@ -113,6 +115,8 @@ jobs:
       - name: Build Electron app
         env:
           VITE_ITO_VERSION: ${{ steps.version.outputs.version_no_v }}
+          VITE_ITO_ENV: dev
+          ITO_ENV: dev
         run: bun run electron-vite build
 
       - name: Package Windows app
