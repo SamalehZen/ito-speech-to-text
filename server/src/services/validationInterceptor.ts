@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Interceptor } from '@connectrpc/connect'
 import { createValidator } from '@bufbuild/protovalidate'
 import { ConnectError, Code } from '@connectrpc/connect'

@@ -59,7 +59,7 @@ export const registerBillingRoutes = async (
       const session = await stripe.checkout.sessions.create({
         mode: 'subscription',
         client_reference_id: userSub,
-        customer_email: userEmail,
+        customer_email: userEmail || undefined,
         metadata: { user_sub: userSub },
         subscription_data: {
           metadata: { user_sub: userSub },

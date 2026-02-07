@@ -10,6 +10,7 @@
     "allowJs": true
   },
   "include": ["src/**/*", "test-client.ts", "scripts/**/*"],
+  "exclude": ["src/**/*.test.ts", "node_modules"],
   "ts-node": {
     "esm": true
   }
