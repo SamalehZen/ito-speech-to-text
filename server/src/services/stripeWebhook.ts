@@ -3,6 +3,12 @@ import Stripe from 'stripe'
 import { SubscriptionsRepository, TrialsRepository } from '../db/repo.js'
 
 export const registerStripeWebhook = async (fastify: FastifyInstance) => {
+  const FREE_MODE = process.env.FREE_MODE === 'true'
+  if (FREE_MODE) {
+    fastify.log.info('FREE_MODE enabled - Stripe webhook disabled')
+    return
+  }
+
   const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY
   const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET
   if (!STRIPE_SECRET_KEY) throw new Error('Missing STRIPE_SECRET_KEY')
