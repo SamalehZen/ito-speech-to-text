@@ -66,12 +66,12 @@ export const registerBillingRoutes = async (
         },
         line_items: [
           {
-            price: STRIPE_PRICE_ID,
+            price: STRIPE_PRICE_ID!,
             quantity: 1,
           },
         ],
-        success_url: `${STRIPE_PUBLIC_BASE_URL}/billing/success?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${STRIPE_PUBLIC_BASE_URL}/billing/cancel`,
+        success_url: `${STRIPE_PUBLIC_BASE_URL!}/billing/success?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${STRIPE_PUBLIC_BASE_URL!}/billing/cancel`,
       })
 
       reply.send({ success: true, url: session.url })
