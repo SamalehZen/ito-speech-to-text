@@ -159,6 +159,7 @@ describe('TextInserter', () => {
 
       for (const transcript of transcripts) {
         mockSetFocusedText.mockClear()
+        mockSetFocusedText.mockResolvedValue(true)
         const result = await textInserter.insertText(transcript)
         expect(result).toBe(true)
         expect(mockSetFocusedText).toHaveBeenCalledTimes(1)
@@ -166,10 +167,12 @@ describe('TextInserter', () => {
     })
 
     test('should handle mixed success and failure scenarios', async () => {
+      mockSetFocusedText.mockClear()
       mockSetFocusedText.mockResolvedValueOnce(true)
       const result1 = await textInserter.insertText('Success')
       expect(result1).toBe(true)
 
+      mockSetFocusedText.mockClear()
       mockSetFocusedText
         .mockResolvedValueOnce(false)
         .mockResolvedValueOnce(false)
@@ -177,6 +180,7 @@ describe('TextInserter', () => {
       const result2 = await textInserter.insertText('Failure')
       expect(result2).toBe(false)
 
+      mockSetFocusedText.mockClear()
       mockSetFocusedText
         .mockRejectedValueOnce(new Error('Error case'))
         .mockRejectedValueOnce(new Error('Error case'))

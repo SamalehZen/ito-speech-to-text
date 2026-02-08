@@ -311,7 +311,10 @@ export class TranscribeStreamV2Handler {
     noSpeechThreshold: number,
   ) {
     return {
-      asrModel: this.resolveOrDefault(asrModel, DEFAULT_ADVANCED_SETTINGS.asrModel),
+      asrModel: this.resolveOrDefault(
+        asrModel,
+        DEFAULT_ADVANCED_SETTINGS.asrModel,
+      ),
       asrProvider: this.resolveOrDefault(
         asrProvider,
         DEFAULT_ADVANCED_SETTINGS.asrProvider,
@@ -399,11 +402,14 @@ export class TranscribeStreamV2Handler {
     const adjustedTranscript = await serverTimingCollector.timeAsync(
       ServerTimingEventName.LLM_ADJUSTMENT,
       () =>
-        llmProvider.adjustTranscript(userPromptPrefix + contextHint + '\n' + userPrompt, {
-          temperature: advancedSettings.llmTemperature,
-          model: advancedSettings.llmModel,
-          prompt: ITO_MODE_SYSTEM_PROMPT[effectiveMode],
-        }),
+        llmProvider.adjustTranscript(
+          userPromptPrefix + contextHint + '\n' + userPrompt,
+          {
+            temperature: advancedSettings.llmTemperature,
+            model: advancedSettings.llmModel,
+            prompt: ITO_MODE_SYSTEM_PROMPT[effectiveMode],
+          },
+        ),
     )
 
     console.log(

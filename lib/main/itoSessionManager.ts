@@ -234,7 +234,10 @@ export class ItoSessionManager {
 
         const insertSuccess = await this.textInserter.insertText(textToInsert)
         if (!insertSuccess) {
-          console.warn('[itoSessionManager] Text insertion failed for:', textToInsert.slice(0, 50))
+          console.warn(
+            '[itoSessionManager] Text insertion failed for:',
+            textToInsert.slice(0, 50),
+          )
         }
 
         // Create interaction in database

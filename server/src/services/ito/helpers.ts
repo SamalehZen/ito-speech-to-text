@@ -171,9 +171,36 @@ export function isEmailContext(context?: ItoContext): boolean {
   const appName = (context.appName || '').toLowerCase()
   const windowTitle = (context.windowTitle || '').toLowerCase()
 
-  const emailApps = ['mail', 'outlook', 'thunderbird', 'spark', 'airmail', 'mailspring', 'postbox']
-  const emailWebApps = ['gmail', 'yahoo mail', 'protonmail', 'outlook.com', 'mail.google', 'webmail']
-  const emailWindowKeywords = ['compose', 'new message', 'nouveau message', 'reply', 'répondre', 'forward', 'transférer', 'draft', 'brouillon', 'inbox', 'boîte de réception']
+  const emailApps = [
+    'mail',
+    'outlook',
+    'thunderbird',
+    'spark',
+    'airmail',
+    'mailspring',
+    'postbox',
+  ]
+  const emailWebApps = [
+    'gmail',
+    'yahoo mail',
+    'protonmail',
+    'outlook.com',
+    'mail.google',
+    'webmail',
+  ]
+  const emailWindowKeywords = [
+    'compose',
+    'new message',
+    'nouveau message',
+    'reply',
+    'répondre',
+    'forward',
+    'transférer',
+    'draft',
+    'brouillon',
+    'inbox',
+    'boîte de réception',
+  ]
 
   if (emailApps.some(app => appName.includes(app))) {
     return true
