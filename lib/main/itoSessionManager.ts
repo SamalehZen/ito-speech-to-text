@@ -232,7 +232,13 @@ export class ItoSessionManager {
             this.grammarRulesService.addLeadingSpaceIfNeeded(textToInsert)
         }
 
-        this.textInserter.insertText(textToInsert)
+        const insertSuccess = await this.textInserter.insertText(textToInsert)
+        if (!insertSuccess) {
+          console.warn(
+            '[itoSessionManager] Text insertion failed for:',
+            textToInsert.slice(0, 50),
+          )
+        }
 
         // Create interaction in database
         await interactionManager.createInteraction(

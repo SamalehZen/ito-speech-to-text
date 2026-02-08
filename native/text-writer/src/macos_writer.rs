@@ -62,9 +62,12 @@ pub fn type_text_macos(text: &str, _char_delay: u64) -> Result<(), String> {
         key_v_down.set_flags(CGEventFlags::CGEventFlagCommand);
         key_v_up.set_flags(CGEventFlags::CGEventFlagCommand);
 
+        // Small delay before paste to let focus stabilize (helps with Gmail/web apps)
+        thread::sleep(Duration::from_millis(30));
+
         // Post the events
         key_v_down.post(core_graphics::event::CGEventTapLocation::HID);
-        thread::sleep(Duration::from_millis(10));
+        thread::sleep(Duration::from_millis(25));
         key_v_up.post(core_graphics::event::CGEventTapLocation::HID);
 
         // Restore old clipboard contents in background after delay in separate thread
