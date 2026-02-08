@@ -1,6 +1,5 @@
 import { describe, test, expect, beforeEach, mock } from 'bun:test'
 
-// Mock the text-writer module
 const mockSetFocusedText = mock(() => Promise.resolve(true))
 mock.module('../../media/text-writer', () => ({
   setFocusedText: mockSetFocusedText,
@@ -14,8 +13,6 @@ describe('TextInserter', () => {
   beforeEach(() => {
     textInserter = new TextInserter()
     mockSetFocusedText.mockClear()
-
-    // Reset default mock behavior
     mockSetFocusedText.mockResolvedValue(true)
   })
 
@@ -26,6 +23,7 @@ describe('TextInserter', () => {
 
       expect(result).toBe(true)
       expect(mockSetFocusedText).toHaveBeenCalledWith(transcript)
+      expect(mockSetFocusedText).toHaveBeenCalledTimes(1)
     })
 
     test('should return false for empty transcript', async () => {
@@ -69,26 +67,72 @@ describe('TextInserter', () => {
       ]
 
       for (const transcript of transcripts) {
+        mockSetFocusedText.mockClear()
         const result = await textInserter.insertText(transcript)
         expect(result).toBe(true)
         expect(mockSetFocusedText).toHaveBeenCalledWith(transcript)
+        expect(mockSetFocusedText).toHaveBeenCalledTimes(1)
       }
+    })
+  })
 
-      expect(mockSetFocusedText).toHaveBeenCalledTimes(transcripts.length)
+  describe('Retry Mechanism', () => {
+    test('should retry on first failure and succeed on second attempt', async () => {
+      mockSetFocusedText
+        .mockResolvedValueOnce(false)
+        .mockResolvedValueOnce(true)
+
+      const result = await textInserter.insertText('test')
+
+      expect(result).toBe(true)
+      expect(mockSetFocusedText).toHaveBeenCalledTimes(2)
+    })
+
+    test('should retry on error and succeed on next attempt', async () => {
+      mockSetFocusedText
+        .mockRejectedValueOnce(new Error('First attempt failed'))
+        .mockResolvedValueOnce(true)
+
+      const result = await textInserter.insertText('test')
+
+      expect(result).toBe(true)
+      expect(mockSetFocusedText).toHaveBeenCalledTimes(2)
+    })
+
+    test('should retry up to 3 times before giving up', async () => {
+      mockSetFocusedText.mockResolvedValue(false)
+
+      const result = await textInserter.insertText('test')
+
+      expect(result).toBe(false)
+      expect(mockSetFocusedText).toHaveBeenCalledTimes(3)
+    })
+
+    test('should succeed on third attempt', async () => {
+      mockSetFocusedText
+        .mockResolvedValueOnce(false)
+        .mockRejectedValueOnce(new Error('Second attempt failed'))
+        .mockResolvedValueOnce(true)
+
+      const result = await textInserter.insertText('test')
+
+      expect(result).toBe(true)
+      expect(mockSetFocusedText).toHaveBeenCalledTimes(3)
     })
   })
 
   describe('Error Handling', () => {
-    test('should handle setFocusedText returning false', async () => {
+    test('should handle setFocusedText returning false after all retries', async () => {
       mockSetFocusedText.mockResolvedValue(false)
 
       const result = await textInserter.insertText('test')
 
       expect(result).toBe(false)
       expect(mockSetFocusedText).toHaveBeenCalledWith('test')
+      expect(mockSetFocusedText).toHaveBeenCalledTimes(3)
     })
 
-    test('should handle setFocusedText throwing error', async () => {
+    test('should handle setFocusedText throwing error after all retries', async () => {
       const testError = new Error('Text insertion failed')
       mockSetFocusedText.mockRejectedValue(testError)
 
@@ -96,6 +140,7 @@ describe('TextInserter', () => {
 
       expect(result).toBe(false)
       expect(mockSetFocusedText).toHaveBeenCalledWith('test')
+      expect(mockSetFocusedText).toHaveBeenCalledTimes(3)
     })
 
     test('should handle setFocusedText throwing non-Error object', async () => {
@@ -104,6 +149,7 @@ describe('TextInserter', () => {
       const result = await textInserter.insertText('test')
 
       expect(result).toBe(false)
+      expect(mockSetFocusedText).toHaveBeenCalledTimes(3)
     })
   })
 
@@ -112,30 +158,31 @@ describe('TextInserter', () => {
       const transcripts = ['First', 'Second', 'Third']
 
       for (const transcript of transcripts) {
+        mockSetFocusedText.mockClear()
         const result = await textInserter.insertText(transcript)
         expect(result).toBe(true)
+        expect(mockSetFocusedText).toHaveBeenCalledTimes(1)
       }
-
-      expect(mockSetFocusedText).toHaveBeenCalledTimes(3)
     })
 
     test('should handle mixed success and failure scenarios', async () => {
-      // First call succeeds
       mockSetFocusedText.mockResolvedValueOnce(true)
       const result1 = await textInserter.insertText('Success')
       expect(result1).toBe(true)
 
-      // Second call fails
-      mockSetFocusedText.mockResolvedValueOnce(false)
+      mockSetFocusedText
+        .mockResolvedValueOnce(false)
+        .mockResolvedValueOnce(false)
+        .mockResolvedValueOnce(false)
       const result2 = await textInserter.insertText('Failure')
       expect(result2).toBe(false)
 
-      // Third call throws error
-      mockSetFocusedText.mockRejectedValueOnce(new Error('Error case'))
+      mockSetFocusedText
+        .mockRejectedValueOnce(new Error('Error case'))
+        .mockRejectedValueOnce(new Error('Error case'))
+        .mockRejectedValueOnce(new Error('Error case'))
       const result3 = await textInserter.insertText('Error')
       expect(result3).toBe(false)
-
-      expect(mockSetFocusedText).toHaveBeenCalledTimes(3)
     })
   })
 })

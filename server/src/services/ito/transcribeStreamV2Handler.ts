@@ -16,6 +16,8 @@ import {
   createUserPromptWithContext,
   detectItoMode,
   getPromptForMode,
+  isEmailContext,
+  getContextHint,
 } from './helpers.js'
 import { ITO_MODE_SYSTEM_PROMPT } from './constants.js'
 import type { ItoContext } from './types.js'
@@ -378,25 +380,29 @@ export class TranscribeStreamV2Handler {
     windowContext: ItoContext,
     advancedSettings: ReturnType<typeof this.prepareAdvancedSettings>,
   ): Promise<string> {
+    const inEmailContext = isEmailContext(windowContext)
+    const effectiveMode = inEmailContext ? ItoMode.EDIT : mode
+
     console.log(
-      `[${new Date().toISOString()}] Detected mode: ${mode}, adjusting transcript`,
+      `[${new Date().toISOString()}] Mode: ${mode}, Email context: ${inEmailContext}, Effective mode: ${effectiveMode}`,
     )
 
-    if (mode !== ItoMode.EDIT) {
+    if (effectiveMode !== ItoMode.EDIT) {
       return transcript
     }
 
-    const userPromptPrefix = getPromptForMode(mode, advancedSettings)
+    const userPromptPrefix = getPromptForMode(effectiveMode, advancedSettings)
+    const contextHint = getContextHint(windowContext)
     const userPrompt = createUserPromptWithContext(transcript, windowContext)
     const llmProvider = getLlmProvider(advancedSettings.llmProvider)
 
     const adjustedTranscript = await serverTimingCollector.timeAsync(
       ServerTimingEventName.LLM_ADJUSTMENT,
       () =>
-        llmProvider.adjustTranscript(userPromptPrefix + '\n' + userPrompt, {
+        llmProvider.adjustTranscript(userPromptPrefix + contextHint + '\n' + userPrompt, {
           temperature: advancedSettings.llmTemperature,
           model: advancedSettings.llmModel,
-          prompt: ITO_MODE_SYSTEM_PROMPT[mode],
+          prompt: ITO_MODE_SYSTEM_PROMPT[effectiveMode],
         }),
     )
 

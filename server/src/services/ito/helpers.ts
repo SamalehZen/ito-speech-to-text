@@ -165,6 +165,38 @@ export function detectItoMode(transcript: string): ItoMode {
   return firstFiveWords.includes('hey ito') ? ItoMode.EDIT : ItoMode.TRANSCRIBE
 }
 
+export function isEmailContext(context?: ItoContext): boolean {
+  if (!context) return false
+
+  const appName = (context.appName || '').toLowerCase()
+  const windowTitle = (context.windowTitle || '').toLowerCase()
+
+  const emailApps = ['mail', 'outlook', 'thunderbird', 'spark', 'airmail', 'mailspring', 'postbox']
+  const emailWebApps = ['gmail', 'yahoo mail', 'protonmail', 'outlook.com', 'mail.google', 'webmail']
+  const emailWindowKeywords = ['compose', 'new message', 'nouveau message', 'reply', 'répondre', 'forward', 'transférer', 'draft', 'brouillon', 'inbox', 'boîte de réception']
+
+  if (emailApps.some(app => appName.includes(app))) {
+    return true
+  }
+
+  if (emailWebApps.some(app => windowTitle.includes(app))) {
+    return true
+  }
+
+  if (emailWindowKeywords.some(keyword => windowTitle.includes(keyword))) {
+    return true
+  }
+
+  return false
+}
+
+export function getContextHint(context?: ItoContext): string {
+  if (isEmailContext(context)) {
+    return '\n\nCONTEXT HINT: User is composing an EMAIL. Format output as a proper email with greeting, body, and closing.'
+  }
+  return ''
+}
+
 export function getPromptForMode(
   mode: ItoMode,
   advancedSettingsHeaders: ReturnType<typeof getAdvancedSettingsHeaders>,
