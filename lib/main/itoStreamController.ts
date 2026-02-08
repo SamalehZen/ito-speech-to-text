@@ -211,6 +211,16 @@ export class ItoStreamController {
 
   private buildStreamConfig(context: ContextData): TranscribeStreamRequest {
     const interactionId = interactionManager.getCurrentInteractionId()
+
+    // Determine the effective transcription prompt
+    // If a tone is set and not "disabled", use its promptTemplate
+    let effectiveTranscriptionPrompt =
+      context.advancedSettings.llm.transcriptionPrompt ?? undefined
+
+    if (context.tone && context.tone.id !== 'disabled' && context.tone.promptTemplate) {
+      effectiveTranscriptionPrompt = context.tone.promptTemplate
+    }
+
     // Build gRPC config message from the provided context data
     return create(TranscribeStreamRequestSchema, {
       payload: {
@@ -235,8 +245,7 @@ export class ItoStreamController {
             llmTemperature:
               context.advancedSettings.llm.llmTemperature ?? undefined,
 
-            transcriptionPrompt:
-              context.advancedSettings.llm.transcriptionPrompt ?? undefined,
+            transcriptionPrompt: effectiveTranscriptionPrompt,
             editingPrompt:
               context.advancedSettings.llm.editingPrompt ?? undefined,
           }),

@@ -1,5 +1,29 @@
 import { ElectronAPI } from '@electron-toolkit/preload'
 import type api from './api'
+
+type AppTarget = {
+  id: string
+  userId: string
+  name: string
+  toneId: string | null
+  iconBase64: string | null
+  createdAt: string
+  updatedAt: string
+  deletedAt: string | null
+}
+
+type Tone = {
+  id: string
+  userId: string | null
+  name: string
+  promptTemplate: string
+  isSystem: boolean
+  sortOrder: number
+  createdAt: string
+  updatedAt: string
+  deletedAt: string | null
+}
+
 type TrialStatus = {
   success: boolean
   trialDays: number
@@ -91,6 +115,23 @@ declare global {
         getAll: () => Promise<any[]>
         getById: (id: string) => Promise<any>
         delete: (id: string) => Promise<void>
+      }
+      appTargets: {
+        list: () => Promise<AppTarget[]>
+        upsert: (data: {
+          id: string
+          name: string
+          toneId?: string | null
+          iconBase64?: string | null
+        }) => Promise<AppTarget>
+        updateTone: (id: string, toneId: string | null) => Promise<void>
+        delete: (id: string) => Promise<void>
+        registerCurrent: () => Promise<AppTarget | null>
+        getCurrent: () => Promise<AppTarget | null>
+      }
+      tones: {
+        list: () => Promise<Tone[]>
+        get: (id: string) => Promise<Tone | null>
       }
       loginItem: {
         setSettings: (enabled: boolean) => Promise<void>
