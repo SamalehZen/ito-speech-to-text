@@ -77,16 +77,18 @@ app.whenReady().then(async () => {
   // Validate stored tokens before using them (will attempt refresh if needed)
   const tokensAreValid = await validateStoredTokens(Auth0Config)
 
-  // If we have valid tokens from a previous session, start the sync service
+  // If we have valid tokens from a previous session, set the auth token
   if (tokensAreValid) {
     const accessToken = mainStore.get(STORE_KEYS.ACCESS_TOKEN) as
       | string
       | undefined
     if (accessToken) {
       grpcClient.setAuthToken(accessToken)
-      syncService.start()
     }
   }
+
+  // Always start sync service (works with or without auth for self-hosted mode)
+  syncService.start()
 
   // Setup protocol handling for deep links
   setupProtocolHandling()
