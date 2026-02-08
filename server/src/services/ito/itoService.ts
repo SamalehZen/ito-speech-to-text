@@ -415,8 +415,17 @@ export default (router: ConnectRouter) => {
     async getAdvancedSettings(_request, context: HandlerContext) {
       const user = context.values.get(kUser)
       const userId = user?.sub
+
+      // If no auth, return defaults for self-hosted/no-auth mode
       if (!userId) {
-        throw new ConnectError('User not authenticated', Code.Unauthenticated)
+        return create(AdvancedSettingsSchema, {
+          id: 'default',
+          userId: 'anonymous',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          llm: create(LlmSettingsSchema, {}),
+          default: DEFAULT_ADVANCED_SETTINGS_STRUCT,
+        })
       }
 
       const settings = await AdvancedSettingsRepository.findByUserId(userId)
@@ -438,8 +447,17 @@ export default (router: ConnectRouter) => {
     async updateAdvancedSettings(request, context: HandlerContext) {
       const user = context.values.get(kUser)
       const userId = user?.sub
+
+      // If no auth, just return the request as-is (no persistence in no-auth mode)
       if (!userId) {
-        throw new ConnectError('User not authenticated', Code.Unauthenticated)
+        return create(AdvancedSettingsSchema, {
+          id: 'default',
+          userId: 'anonymous',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          llm: request.llm ?? create(LlmSettingsSchema, {}),
+          default: DEFAULT_ADVANCED_SETTINGS_STRUCT,
+        })
       }
 
       const updatedSettings = await AdvancedSettingsRepository.upsert(
