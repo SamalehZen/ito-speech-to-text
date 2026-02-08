@@ -61,4 +61,71 @@ export const MIGRATIONS: Migration[] = [
     `,
     down: 'DROP TABLE user_metadata;',
   },
+  {
+    id: '20260208000000_add_app_targets_and_tones',
+    up: `
+      CREATE TABLE IF NOT EXISTS app_targets (
+        id TEXT NOT NULL,
+        user_id TEXT NOT NULL,
+        name TEXT NOT NULL,
+        tone_id TEXT,
+        icon_base64 TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        deleted_at TEXT,
+        PRIMARY KEY (id, user_id)
+      );
+
+      CREATE TABLE IF NOT EXISTS tones (
+        id TEXT PRIMARY KEY,
+        user_id TEXT,
+        name TEXT NOT NULL,
+        prompt_template TEXT NOT NULL,
+        is_system INTEGER DEFAULT 0,
+        sort_order INTEGER DEFAULT 0,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        deleted_at TEXT
+      );
+
+      INSERT OR IGNORE INTO tones (id, user_id, name, prompt_template, is_system, sort_order, created_at, updated_at) VALUES
+      ('polished', NULL, 'Polished', '- Only correct grammar that would confuse the reader or look like an unintentional mistake
+- Keep the speaker''s vocabulary, sentence patterns, and tone intact
+- Remove filler words and speech disfluencies that carry no meaning
+- The result should read like the speaker sat down and typed it carefully', 1, 0, datetime('now'), datetime('now')),
+
+      ('verbatim', NULL, 'Verbatim', '- Produce a near-exact transcription that preserves the speaker''s voice
+- Add punctuation, capitalization, and paragraph breaks for readability
+- Remove filler words (um, uh, like), false starts, repeated words
+- Do NOT fix grammar or restructure sentences', 1, 1, datetime('now'), datetime('now')),
+
+      ('email', NULL, 'Email', '- Sound like the speaker, but written
+- Fix grammar, remove filler and disfluencies, lightly restructure for readability
+- Format as a professional email with greeting, body, and sign-off
+- Preserve the speaker''s greeting and sign-off if present
+- DO NOT introduce new phrasing or change intent', 1, 2, datetime('now'), datetime('now')),
+
+      ('chat', NULL, 'Chat', '- Keep the language casual and conversational like a text message
+- Capitalize the first letter of each sentence
+- Remove filler words that detract from the casual tone
+- Keep question marks and exclamation points
+- Never end the last sentence with a period', 1, 3, datetime('now'), datetime('now')),
+
+      ('formal', NULL, 'Formal', '- Rewrite in a polished, professional register
+- Use complete sentences, precise vocabulary, and proper grammar
+- Avoid contractions, colloquialisms, and casual phrasing
+- The result should be suitable for official documents or professional correspondence', 1, 4, datetime('now'), datetime('now')),
+
+      ('disabled', NULL, 'Disabled', '', 1, 5, datetime('now'), datetime('now'));
+
+      CREATE INDEX IF NOT EXISTS idx_app_targets_user_id ON app_targets(user_id);
+      CREATE INDEX IF NOT EXISTS idx_tones_user_id ON tones(user_id);
+    `,
+    down: `
+      DROP INDEX IF EXISTS idx_app_targets_user_id;
+      DROP INDEX IF EXISTS idx_tones_user_id;
+      DROP TABLE IF EXISTS app_targets;
+      DROP TABLE IF EXISTS tones;
+    `,
+  },
 ]

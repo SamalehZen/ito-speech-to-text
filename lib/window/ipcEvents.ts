@@ -591,6 +591,92 @@ export function registerIPC() {
     InteractionsTable.softDelete(id),
   )
 
+  // App Targets
+  handleIPC('app-targets:list', async () => {
+    const userId = getCurrentUserId()
+    if (!userId) return []
+    const { AppTargetTable } = await import('../main/sqlite/appTargetRepo')
+    return AppTargetTable.findAll(userId)
+  })
+
+  handleIPC(
+    'app-targets:upsert',
+    async (
+      _e,
+      data: {
+        id: string
+        name: string
+        toneId?: string | null
+        iconBase64?: string | null
+      },
+    ) => {
+      const userId = getCurrentUserId()
+      if (!userId) throw new Error('No user ID found')
+      const { AppTargetTable } = await import('../main/sqlite/appTargetRepo')
+      return AppTargetTable.upsert({ ...data, userId })
+    },
+  )
+
+  handleIPC(
+    'app-targets:update-tone',
+    async (_e, id: string, toneId: string | null) => {
+      const userId = getCurrentUserId()
+      if (!userId) throw new Error('No user ID found')
+      const { AppTargetTable } = await import('../main/sqlite/appTargetRepo')
+      return AppTargetTable.updateTone(id, userId, toneId)
+    },
+  )
+
+  handleIPC('app-targets:delete', async (_e, id: string) => {
+    const userId = getCurrentUserId()
+    if (!userId) throw new Error('No user ID found')
+    const { AppTargetTable } = await import('../main/sqlite/appTargetRepo')
+    return AppTargetTable.delete(id, userId)
+  })
+
+  handleIPC('app-targets:register-current', async () => {
+    const userId = getCurrentUserId()
+    if (!userId) return null
+    const { getActiveWindow } = await import('../media/active-application')
+    const { normalizeAppTargetId } = await import('../utils/appTargetUtils')
+    const { AppTargetTable } = await import('../main/sqlite/appTargetRepo')
+    const window = await getActiveWindow()
+    if (!window) return null
+
+    const id = normalizeAppTargetId(window.appName)
+    return AppTargetTable.upsert({
+      id,
+      userId,
+      name: window.appName,
+    })
+  })
+
+  handleIPC('app-targets:get-current', async () => {
+    const userId = getCurrentUserId()
+    if (!userId) return null
+    const { getActiveWindow } = await import('../media/active-application')
+    const { normalizeAppTargetId } = await import('../utils/appTargetUtils')
+    const { AppTargetTable } = await import('../main/sqlite/appTargetRepo')
+    const window = await getActiveWindow()
+    if (!window) return null
+
+    const id = normalizeAppTargetId(window.appName)
+    return AppTargetTable.findById(id, userId)
+  })
+
+  // Tones
+  handleIPC('tones:list', async () => {
+    const userId = getCurrentUserId()
+    if (!userId) return []
+    const { ToneTable } = await import('../main/sqlite/appTargetRepo')
+    return ToneTable.findAll(userId)
+  })
+
+  handleIPC('tones:get', async (_e, id: string) => {
+    const { ToneTable } = await import('../main/sqlite/appTargetRepo')
+    return ToneTable.findById(id)
+  })
+
   // User Data Deletion
   handleIPC('delete-user-data', async _e => {
     const userId = getCurrentUserId()

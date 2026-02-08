@@ -9,6 +9,7 @@ type SettingsPageType =
   | 'account'
   | 'advanced'
   | 'pricing-billing'
+  | 'app-styling'
 
 interface MainStore {
   navExpanded: boolean
