@@ -59,11 +59,10 @@ fn extract_domain(url: &str) -> Option<String> {
 
 #[cfg(target_os = "windows")]
 fn get_browser_url() -> Result<BrowserUrlResult, Box<dyn std::error::Error>> {
+    use windows::core::Interface;
     use windows::Win32::System::Com::{CoCreateInstance, CoInitializeEx, CLSCTX_INPROC_SERVER, COINIT_MULTITHREADED};
-    use windows::Win32::System::Threading::{OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION};
     use windows::Win32::UI::Accessibility::*;
     use windows::Win32::UI::WindowsAndMessaging::GetForegroundWindow;
-    use windows::Win32::Foundation::*;
 
     unsafe {
         let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
