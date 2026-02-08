@@ -21,6 +21,7 @@ export enum TimingEventName {
   // Context and processing
   SELCTED_TEXT_GATHER = 'selected_text_gather',
   WINDOW_CONTEXT_GATHER = 'window_context_gather',
+  BROWSER_URL_GATHER = 'browser_url_gather',
   GRAMMAR_SERVICE = 'grammar_service',
   CURSOR_CONTEXT_GATHER = 'cursor_context_gather',
 

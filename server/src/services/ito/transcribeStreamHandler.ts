@@ -111,6 +111,8 @@ export class TranscribeStreamHandler {
 
       const windowTitle = context.requestHeader.get('window-title') || ''
       const appName = context.requestHeader.get('app-name') || ''
+      const browserUrl = context.requestHeader.get('browser-url') || ''
+      const browserDomain = context.requestHeader.get('browser-domain') || ''
       const mode = getItoMode(context.requestHeader.get('mode'))
 
       // Decode context text if it was base64 encoded due to Unicode characters
@@ -119,7 +121,7 @@ export class TranscribeStreamHandler {
         ? Buffer.from(rawContextText.substring(7), 'base64').toString('utf8')
         : rawContextText
 
-      const windowContext: ItoContext = { windowTitle, appName, contextText }
+      const windowContext: ItoContext = { windowTitle, appName, contextText, browserUrl, browserDomain }
 
       const detectedMode = mode || detectItoMode(transcript)
       const userPromptPrefix = getPromptForMode(

@@ -1,12 +1,15 @@
 import { ItoMode } from '@/app/generated/ito_pb'
 import { DictionaryTable } from '../sqlite/repo'
+import { AppTargetTable, ToneTable, type Tone } from '../sqlite/appTargetRepo'
 import { getCurrentUserId, getAdvancedSettings } from '../store'
 import { getActiveWindow } from '../../media/active-application'
 import {
   getSelectedTextString,
   getCursorContext,
 } from '../../media/selected-text-reader'
+import { getBrowserUrl } from '../../media/browser-url'
 import { canGetContextFromCurrentApp } from '../../utils/applicationDetection'
+import { normalizeAppTargetId, DEFAULT_TONE_ID } from '../../utils/appTargetUtils'
 import log from 'electron-log'
 import { timingCollector, TimingEventName } from '../timing/TimingCollector'
 import { macOSAccessibilityContextProvider } from '../../media/macOSAccessibilityContextProvider'
@@ -16,6 +19,9 @@ export interface ContextData {
   windowTitle: string
   appName: string
   contextText: string
+  browserUrl: string | null
+  browserDomain: string | null
+  tone: Tone | null
   advancedSettings: ReturnType<typeof getAdvancedSettings>
 }
 
@@ -34,13 +40,23 @@ export class ContextGrabber {
     const vocabularyWords = await this.getVocabulary()
 
     // Get active window context
-    const { windowTitle, appName } = await timingCollector.timeAsync(
+    const windowContext = await timingCollector.timeAsync(
       TimingEventName.WINDOW_CONTEXT_GATHER,
       async () => await this.getWindowContext(),
     )
 
+    // Get browser URL if in a browser
+    const { url: browserUrl, domain: browserDomain } =
+      await timingCollector.timeAsync(
+        TimingEventName.BROWSER_URL_GATHER,
+        async () => await getBrowserUrl(windowContext),
+      )
+
     // Get selected text if in EDIT mode
     const contextText = await this.getContextText(mode)
+
+    // Get tone for current app
+    const tone = await this.getToneForCurrentApp(windowContext?.appName || '')
 
     // Get advanced settings
     const advancedSettings = getAdvancedSettings()
@@ -49,10 +65,29 @@ export class ContextGrabber {
 
     return {
       vocabularyWords,
-      windowTitle,
-      appName,
+      windowTitle: windowContext?.title || '',
+      appName: windowContext?.appName || '',
       contextText,
+      browserUrl,
+      browserDomain,
+      tone,
       advancedSettings,
+    }
+  }
+
+  private async getToneForCurrentApp(appName: string): Promise<Tone | null> {
+    try {
+      const userId = getCurrentUserId()
+      if (!userId || !appName) return null
+
+      const appId = normalizeAppTargetId(appName)
+      const appTarget = await AppTargetTable.findById(appId, userId)
+
+      const toneId = appTarget?.toneId || DEFAULT_TONE_ID
+      return ToneTable.findById(toneId)
+    } catch (error) {
+      log.error('[ContextGrabber] Error getting tone:', error)
+      return null
     }
   }
 
@@ -70,21 +105,19 @@ export class ContextGrabber {
   }
 
   private async getWindowContext(): Promise<{
-    windowTitle: string
+    title: string
     appName: string
-  }> {
+  } | null> {
     try {
       const windowContext = await getActiveWindow()
+      if (!windowContext) return null
       return {
-        windowTitle: windowContext?.title || '',
-        appName: windowContext?.appName || '',
+        title: windowContext.title || '',
+        appName: windowContext.appName || '',
       }
     } catch (error) {
       log.error('[ContextGrabber] Error getting window context:', error)
-      return {
-        windowTitle: '',
-        appName: '',
-      }
+      return null
     }
   }
 
