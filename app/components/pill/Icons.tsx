@@ -27,7 +27,7 @@ export const WaveformIcon = ({
   isLight = false,
   volumeHistory = [],
 }: WaveformIconProps) => {
-  const barColor = isLight ? 'bg-zinc-600' : 'bg-white'
+  const barColor = isLight ? '#52525b' : '#ffffff'
 
   const getBarHeight = (index: number): number => {
     const baseHeights = [10, 16, 20, 16, 10]
@@ -40,11 +40,17 @@ export const WaveformIcon = ({
   }
 
   return (
-    <div className="flex items-center gap-[3px] h-5">
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '3px',
+        height: '20px',
+      }}
+    >
       {Array.from({ length: BAR_COUNT }).map((_, index) => (
         <motion.div
           key={index}
-          className={`w-[3px] rounded-full ${barColor}`}
           animate={{
             height: [
               getBarHeight(index) * 0.5,
@@ -62,6 +68,9 @@ export const WaveformIcon = ({
             delay: index * 0.1,
           }}
           style={{
+            width: '3px',
+            borderRadius: '9999px',
+            backgroundColor: barColor,
             minHeight: 8,
             maxHeight: 20,
           }}

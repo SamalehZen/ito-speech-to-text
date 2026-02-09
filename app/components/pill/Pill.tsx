@@ -27,6 +27,7 @@ const globalStyles = `
     justify-content: center;
 
     pointer-events: none;
+    background: transparent;
 
     font-family:
       'Inter',
@@ -40,14 +41,6 @@ const globalStyles = `
 `
 
 const BAR_UPDATE_INTERVAL = 64
-
-const springTransition = {
-  type: 'spring' as const,
-  stiffness: 400,
-  damping: 30,
-  mass: 0.5,
-  restDelta: 0.001,
-}
 
 const DynamicNotch: React.FC = () => {
   const initialShowItoBarAlways = useSettingsStore(
@@ -161,105 +154,150 @@ const DynamicNotch: React.FC = () => {
       ? UIState.LISTENING
       : UIState.IDLE
 
-  const { width, height, borderBottomRadius } = useMemo(() => {
+  const { width, height } = useMemo(() => {
     if (uiState === UIState.LISTENING || uiState === UIState.THINKING) {
-      return { width: 360, height: 46, borderBottomRadius: 20 }
+      return { width: 360, height: 46 }
     }
-    return { width: 200, height: 46, borderBottomRadius: 20 }
+    return { width: 200, height: 46 }
   }, [uiState])
 
+  const isOnboarded =
+    onboardingCategory === ONBOARDING_CATEGORIES.TRY_IT || onboardingCompleted
+
   const shouldShow =
-    (onboardingCategory === ONBOARDING_CATEGORIES.TRY_IT ||
-      onboardingCompleted) &&
-    (isRecording || isProcessing || showItoBarAlways)
+    isOnboarded && (isRecording || isProcessing || showItoBarAlways)
+
+  const pillStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    width: `${width}px`,
+    height: `${height}px`,
+    background: 'linear-gradient(to bottom, #000000, #141414)',
+    boxShadow:
+      '0 10px 30px rgba(0,0,0,0.8), inset 0 -1px 0 rgba(255,255,255,0.15), inset 0 -8px 12px rgba(255,255,255,0.02)',
+    border: '1px solid rgba(255,255,255,0.05)',
+    borderTop: 'none',
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
+    borderBottomLeftRadius: '20px',
+    borderBottomRightRadius: '20px',
+    overflow: 'hidden',
+    backdropFilter: 'blur(40px) saturate(1.5)',
+    WebkitBackdropFilter: 'blur(40px) saturate(1.5)',
+    pointerEvents: shouldShow ? 'auto' : 'none',
+    opacity: shouldShow ? 1 : 0,
+    transform: shouldShow ? 'scale(1) translateY(0)' : 'scale(0.9) translateY(-10px)',
+    transition: 'width 0.3s ease, height 0.3s ease, opacity 0.3s ease, transform 0.3s ease',
+  }
+
+  const renderStateIndicator = () => {
+    if (uiState === UIState.IDLE) {
+      return (
+        <div
+          style={{
+            width: '8px',
+            height: '8px',
+            borderRadius: '50%',
+            backgroundColor: 'rgba(255,255,255,0.2)',
+          }}
+        />
+      )
+    }
+
+    if (uiState === UIState.LISTENING) {
+      return <WaveformIcon volumeHistory={volumeHistory} />
+    }
+
+    if (uiState === UIState.THINKING) {
+      return (
+        <motion.div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+          }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+        >
+          <motion.div
+            animate={{ rotate: 360, scale: [1, 1.1, 1] }}
+            transition={{
+              rotate: { repeat: Infinity, duration: 3, ease: 'linear' },
+              scale: { repeat: Infinity, duration: 2 },
+            }}
+          >
+            <Sparkles
+              style={{ width: '16px', height: '16px', color: '#007AFF' }}
+              fill="currentColor"
+            />
+          </motion.div>
+          <span
+            style={{
+              fontSize: '14px',
+              fontWeight: 500,
+              color: '#007AFF',
+            }}
+          >
+            Thinking
+          </span>
+        </motion.div>
+      )
+    }
+
+    return null
+  }
 
   return (
     <>
       <style>{globalStyles}</style>
-      <div className="fixed top-0 left-0 w-full flex justify-center z-50 pointer-events-none">
-        <motion.div
-          layout="preserve-aspect"
-          initial={false}
-          animate={{
-            width,
-            height,
-            borderBottomLeftRadius: borderBottomRadius,
-            borderBottomRightRadius: borderBottomRadius,
-            opacity: shouldShow ? 1 : 0,
-            scale: shouldShow ? 1 : 0.8,
-          }}
-          transition={springTransition}
-          className="relative flex items-center pointer-events-auto backdrop-blur-[40px] saturate-150 overflow-hidden rounded-t-none border-t-0
-            bg-gradient-to-b from-black to-[#141414] 
-            shadow-[0_10px_30px_rgba(0,0,0,0.8),inset_0_-1px_0_rgba(255,255,255,0.15),inset_0_-8px_12px_rgba(255,255,255,0.02)] 
-            border-x border-b border-white/5 ring-1 ring-white/5"
+      <div style={pillStyle}>
+        <div
           style={{
-            transform: 'translateZ(0)',
-            willChange: 'width, height',
-            visibility: shouldShow ? 'visible' : 'hidden',
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '0 20px',
           }}
         >
-          <motion.div className="absolute inset-0 w-full h-full flex items-center justify-between px-5">
-            <div className="flex items-center gap-3 shrink-0">
-              <ItoLogo className="w-6 h-6" />
-              <span className="text-[14px] font-semibold tracking-wide text-white">
-                Ito
-              </span>
-            </div>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              flexShrink: 0,
+            }}
+          >
+            <ItoLogo className="w-6 h-6" />
+            <span
+              style={{
+                fontSize: '14px',
+                fontWeight: 600,
+                letterSpacing: '0.025em',
+                color: 'white',
+              }}
+            >
+              Ito
+            </span>
+          </div>
 
-            <AnimatePresence mode="wait">
-              {uiState === UIState.IDLE && (
-                <motion.div
-                  key="idle-dot"
-                  initial={{ scale: 0, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{ scale: 0, opacity: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="w-2 h-2 rounded-full bg-white/20"
-                />
-              )}
-
-              {uiState === UIState.LISTENING && (
-                <motion.div
-                  key="listening"
-                  initial={{ opacity: 0, x: 10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 10 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <WaveformIcon volumeHistory={volumeHistory} />
-                </motion.div>
-              )}
-
-              {uiState === UIState.THINKING && (
-                <motion.div
-                  key="thinking"
-                  initial={{ opacity: 0, x: 10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 10 }}
-                  transition={{ duration: 0.2 }}
-                  className="flex items-center gap-2"
-                >
-                  <motion.div
-                    animate={{ rotate: 360, scale: [1, 1.1, 1] }}
-                    transition={{
-                      rotate: { repeat: Infinity, duration: 3, ease: 'linear' },
-                      scale: { repeat: Infinity, duration: 2 },
-                    }}
-                  >
-                    <Sparkles
-                      className="w-4 h-4 text-[#007AFF]"
-                      fill="currentColor"
-                    />
-                  </motion.div>
-                  <span className="text-[14px] font-medium text-[#007AFF]">
-                    Thinking
-                  </span>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </motion.div>
-        </motion.div>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={uiState}
+              initial={{ opacity: 0, x: 10 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -10 }}
+              transition={{ duration: 0.2 }}
+            >
+              {renderStateIndicator()}
+            </motion.div>
+          </AnimatePresence>
+        </div>
       </div>
     </>
   )
