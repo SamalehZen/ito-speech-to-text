@@ -982,11 +982,15 @@ ipcMain.handle('app-targets:register-current', async () => {
   const userId = getCurrentUserId()
   if (!userId) return null
 
-  if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.hide()
+  const isMac = process.platform === 'darwin'
+
+  if (isMac) {
+    app.hide()
+  } else if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.minimize()
   }
 
-  await new Promise(resolve => setTimeout(resolve, 300))
+  await new Promise(resolve => setTimeout(resolve, 500))
 
   const window = await getActiveWindow()
 
@@ -997,11 +1001,16 @@ ipcMain.handle('app-targets:register-current', async () => {
 
   if (!window) return null
 
-  const id = normalizeAppTargetId(window.appName)
+  const appName = window.appName
+  if (isMac && appName.toLowerCase().includes('electron')) {
+    return null
+  }
+
+  const id = normalizeAppTargetId(appName)
   return AppTargetTable.upsert({
     id,
     userId,
-    name: window.appName,
+    name: appName,
   })
 })
 
