@@ -385,7 +385,9 @@ export class TranscribeStreamV2Handler {
       `[${new Date().toISOString()}] Detected mode: ${mode}, adjusting transcript`,
     )
 
-    if (mode !== ItoMode.EDIT) {
+    const hasTonePrompt = windowContext.tonePrompt && windowContext.tonePrompt.trim() !== ''
+    
+    if (mode !== ItoMode.EDIT && !hasTonePrompt) {
       return transcript
     }
 
