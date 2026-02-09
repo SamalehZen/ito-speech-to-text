@@ -81,8 +81,8 @@ export function createAppWindow(): BrowserWindow {
   return mainWindow
 }
 
-const PILL_MAX_WIDTH = 172
-const PILL_MAX_HEIGHT = 84
+const PILL_MAX_WIDTH = 400
+const PILL_MAX_HEIGHT = 60
 export function createPillWindow(): void {
   pillWindow = new BrowserWindow({
     width: PILL_MAX_WIDTH,
@@ -155,39 +155,25 @@ function updatePillPosition() {
   if (!pillWindow) return
 
   try {
-    // Get the display that the mouse cursor is currently on.
     const point = screen.getCursorScreenPoint()
     const display = screen.getDisplayNearestPoint(point)
-    const { width: pillWidth, height: pillHeight } = pillWindow.getBounds()
-
-    // Use workArea instead of bounds to account for dock/menu bar
-    const { x, y, width, height } = display.workArea
-    const screenBounds = display.bounds
+    const { width: pillWidth } = pillWindow.getBounds()
+    const { x, y, width } = display.workArea
 
     const scale = display.scaleFactor || 1
     const roundToDeviceDip = (v: number) =>
       Math.round(Math.round(v * scale) / scale)
 
-    // Calculate position: Horizontally centered, positioned above taskbar
     const newX = roundToDeviceDip(x + width / 2 - pillWidth / 2)
+    const newY = y
 
-    // Position just above the work area bottom
-    const newY = roundToDeviceDip(y + height - pillHeight - 10)
-
-    // Ensure we don't go below the screen bounds
-    const maxY = screenBounds.y + screenBounds.height - pillHeight - 10
-    const finalY = Math.min(newY, maxY)
-
-    // Only move if position actually changed (>= 1 DIP)
     const [currX, currY] = pillWindow.getPosition()
-    if (Math.abs(currX - newX) < 1 && Math.abs(currY - finalY) < 1) {
+    if (Math.abs(currX - newX) < 1 && Math.abs(currY - newY) < 1) {
       return
     }
 
-    // Set the position of the pill window.
-    pillWindow.setPosition(newX, finalY, false) // `false` = not animated
+    pillWindow.setPosition(newX, newY, false)
   } catch (error) {
-    // This can fail if the app is starting up or shutting down.
     console.warn('Could not update pill position:', error)
   }
 }
