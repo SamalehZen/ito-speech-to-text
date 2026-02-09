@@ -939,10 +939,11 @@ ipcMain.on(IPC_EVENTS.USER_AUTH_UPDATE, (_event, authUser: any) => {
   getPillWindow()?.webContents.send(IPC_EVENTS.USER_AUTH_UPDATE, authUser)
 })
 
+const DEFAULT_LOCAL_USER_ID = 'local-user'
+
 // App Targets
 ipcMain.handle('app-targets:list', async () => {
-  const userId = getCurrentUserId()
-  if (!userId) return []
+  const userId = getCurrentUserId() || DEFAULT_LOCAL_USER_ID
   return AppTargetTable.findAll(userId)
 })
 
@@ -957,8 +958,7 @@ ipcMain.handle(
       iconBase64?: string | null
     }
   ) => {
-    const userId = getCurrentUserId()
-    if (!userId) return null
+    const userId = getCurrentUserId() || DEFAULT_LOCAL_USER_ID
     return AppTargetTable.upsert({ ...data, userId })
   }
 )
@@ -966,21 +966,18 @@ ipcMain.handle(
 ipcMain.handle(
   'app-targets:update-tone',
   async (_event, id: string, toneId: string | null) => {
-    const userId = getCurrentUserId()
-    if (!userId) return
+    const userId = getCurrentUserId() || DEFAULT_LOCAL_USER_ID
     return AppTargetTable.updateTone(id, userId, toneId)
   }
 )
 
 ipcMain.handle('app-targets:delete', async (_event, id: string) => {
-  const userId = getCurrentUserId()
-  if (!userId) return
+  const userId = getCurrentUserId() || DEFAULT_LOCAL_USER_ID
   return AppTargetTable.delete(id, userId)
 })
 
 ipcMain.handle('app-targets:register-current', async () => {
-  const userId = getCurrentUserId()
-  if (!userId) return null
+  const userId = getCurrentUserId() || DEFAULT_LOCAL_USER_ID
 
   const isMac = process.platform === 'darwin'
 
@@ -1023,8 +1020,7 @@ ipcMain.handle('app-targets:register-current', async () => {
 })
 
 ipcMain.handle('app-targets:get-current', async () => {
-  const userId = getCurrentUserId()
-  if (!userId) return null
+  const userId = getCurrentUserId() || DEFAULT_LOCAL_USER_ID
 
   const window = await getActiveWindow()
   if (!window) return null
@@ -1035,8 +1031,7 @@ ipcMain.handle('app-targets:get-current', async () => {
 
 // Tones
 ipcMain.handle('tones:list', async () => {
-  const userId = getCurrentUserId()
-  if (!userId) return []
+  const userId = getCurrentUserId() || DEFAULT_LOCAL_USER_ID
   return ToneTable.findAll(userId)
 })
 
