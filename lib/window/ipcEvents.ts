@@ -990,11 +990,12 @@ ipcMain.handle('app-targets:register-current', async () => {
     mainWindow.minimize()
   }
 
-  await new Promise(resolve => setTimeout(resolve, 500))
+  await new Promise(resolve => setTimeout(resolve, 2500))
 
   const window = await getActiveWindow()
 
   if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.restore()
     mainWindow.show()
     mainWindow.focus()
   }
@@ -1002,7 +1003,8 @@ ipcMain.handle('app-targets:register-current', async () => {
   if (!window) return null
 
   const appName = window.appName
-  if (isMac && appName.toLowerCase().includes('electron')) {
+  const lowerName = appName.toLowerCase()
+  if (lowerName.includes('electron') || lowerName.includes('ito')) {
     return null
   }
 
