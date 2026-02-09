@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useAppStylingStore } from '@/app/store/useAppStylingStore'
 import { AppStylingRow } from './AppStylingRow'
 import { Button } from '@/app/components/ui/button'
@@ -13,10 +13,26 @@ export default function AppStylingSettingsContent() {
     registerCurrentApp,
   } = useAppStylingStore()
 
+  const [isRegistering, setIsRegistering] = useState(false)
+
   useEffect(() => {
     loadAppTargets()
     loadTones()
   }, [loadAppTargets, loadTones])
+
+  const handleRegisterApp = async () => {
+    setIsRegistering(true)
+    try {
+      const result = await registerCurrentApp()
+      if (!result) {
+        console.error('No app detected - make sure another app is open')
+      }
+    } catch (error) {
+      console.error('Failed to register app:', error)
+    } finally {
+      setIsRegistering(false)
+    }
+  }
 
   const sortedApps = Object.values(appTargets).sort((a, b) =>
     a.name.localeCompare(b.name)
@@ -37,8 +53,12 @@ export default function AppStylingSettingsContent() {
             using.
           </p>
         </div>
-        <Button onClick={registerCurrentApp} variant="outline">
-          Register Current App
+        <Button
+          onClick={handleRegisterApp}
+          variant="outline"
+          disabled={isRegistering}
+        >
+          {isRegistering ? 'Detecting...' : 'Register Current App'}
         </Button>
       </div>
 

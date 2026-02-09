@@ -982,7 +982,19 @@ ipcMain.handle('app-targets:register-current', async () => {
   const userId = getCurrentUserId()
   if (!userId) return null
 
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.hide()
+  }
+
+  await new Promise(resolve => setTimeout(resolve, 300))
+
   const window = await getActiveWindow()
+
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.show()
+    mainWindow.focus()
+  }
+
   if (!window) return null
 
   const id = normalizeAppTargetId(window.appName)
