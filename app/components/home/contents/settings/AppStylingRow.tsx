@@ -11,7 +11,7 @@ import {
   SelectValue,
 } from '@/app/components/ui/select'
 import { Button } from '@/app/components/ui/button'
-import { Trash2 } from 'lucide-react'
+import { Trash2, Globe, AppWindow } from 'lucide-react'
 
 type Props = {
   app: AppTarget
@@ -22,6 +22,7 @@ export const AppStylingRow = ({ app, tones }: Props) => {
   const { updateAppTone, deleteAppTarget } = useAppStylingStore()
 
   const currentTone = tones.find(t => t.id === (app.toneId || 'polished'))
+  const isDomain = app.matchType === 'domain'
 
   return (
     <div className="flex items-center gap-4 p-4">
@@ -32,15 +33,18 @@ export const AppStylingRow = ({ app, tones }: Props) => {
             alt={app.name}
             className="w-8 h-8"
           />
+        ) : isDomain ? (
+          <Globe className="w-5 h-5 text-slate-600" />
         ) : (
-          <span className="text-lg font-medium text-slate-600">
-            {app.name.charAt(0).toUpperCase()}
-          </span>
+          <AppWindow className="w-5 h-5 text-slate-600" />
         )}
       </div>
 
       <div className="flex-1 min-w-0">
         <p className="font-medium truncate">{app.name}</p>
+        <p className="text-xs text-gray-500">
+          {isDomain ? 'Domain' : 'Application'}
+        </p>
       </div>
 
       <Select

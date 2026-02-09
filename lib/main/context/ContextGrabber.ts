@@ -60,8 +60,8 @@ export class ContextGrabber {
     // Get advanced settings
     const advancedSettings = getAdvancedSettings()
 
-    // Get tone for current app
-    const tone = await this.getToneForCurrentApp(windowContext?.appName)
+    // Get tone for current app (check domain first, then app)
+    const tone = await this.getToneForCurrentApp(windowContext?.appName, browserDomain)
 
     console.log('[ContextGrabber] App name:', windowContext?.appName)
     console.log('[ContextGrabber] Tone found:', tone?.name, '| Template:', tone?.promptTemplate?.substring(0, 50))
@@ -109,16 +109,27 @@ export class ContextGrabber {
     }
   }
 
-  private async getToneForCurrentApp(appName?: string): Promise<Tone | null> {
+  private async getToneForCurrentApp(appName?: string, browserDomain?: string | null): Promise<Tone | null> {
     try {
       const userId = getCurrentUserId() || DEFAULT_LOCAL_USER_ID
       if (!appName) return null
 
-      const appId = normalizeAppTargetId(appName)
-      console.log('[ContextGrabber] Looking for tone - userId:', userId, '| appId:', appId)
-      
-      const appTarget = await AppTargetTable.findById(appId, userId)
-      console.log('[ContextGrabber] AppTarget found:', appTarget?.name, '| toneId:', appTarget?.toneId)
+      console.log('[ContextGrabber] Looking for tone - userId:', userId, '| appName:', appName, '| browserDomain:', browserDomain)
+
+      let appTarget = null
+
+      if (browserDomain) {
+        appTarget = await AppTargetTable.findByDomain(browserDomain, userId)
+        console.log('[ContextGrabber] Domain match result:', appTarget?.name)
+      }
+
+      if (!appTarget) {
+        const appId = normalizeAppTargetId(appName)
+        appTarget = await AppTargetTable.findById(appId, userId)
+        console.log('[ContextGrabber] App match result:', appTarget?.name)
+      }
+
+      console.log('[ContextGrabber] Final AppTarget found:', appTarget?.name, '| toneId:', appTarget?.toneId)
 
       const toneId = appTarget?.toneId || DEFAULT_TONE_ID
       const tone = await ToneTable.findById(toneId)

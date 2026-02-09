@@ -1,14 +1,25 @@
 import { create } from 'zustand'
 
+export type MatchType = 'app' | 'domain'
+
 export type AppTarget = {
   id: string
   userId: string
   name: string
+  matchType: MatchType
+  domain: string | null
   toneId: string | null
   iconBase64: string | null
   createdAt: string
   updatedAt: string
   deletedAt: string | null
+}
+
+export type DetectedContext = {
+  appName: string
+  browserUrl: string | null
+  browserDomain: string | null
+  suggestedMatchType: MatchType
 }
 
 export type Tone = {
@@ -27,19 +38,23 @@ type AppStylingState = {
   appTargets: Record<string, AppTarget>
   tones: Record<string, Tone>
   isLoading: boolean
+  detectedContext: DetectedContext | null
 
   loadAppTargets: () => Promise<void>
   loadTones: () => Promise<void>
-  registerCurrentApp: () => Promise<AppTarget | null>
+  detectCurrentApp: () => Promise<DetectedContext | null>
+  registerApp: (matchType: MatchType, domain?: string | null) => Promise<AppTarget | null>
   updateAppTone: (appId: string, toneId: string | null) => Promise<void>
   deleteAppTarget: (appId: string) => Promise<void>
   getCurrentAppTarget: () => Promise<AppTarget | null>
+  clearDetectedContext: () => void
 }
 
 export const useAppStylingStore = create<AppStylingState>((set) => ({
   appTargets: {},
   tones: {},
   isLoading: false,
+  detectedContext: null,
 
   loadAppTargets: async () => {
     set({ isLoading: true })
@@ -75,19 +90,37 @@ export const useAppStylingStore = create<AppStylingState>((set) => ({
     }
   },
 
-  registerCurrentApp: async () => {
+  detectCurrentApp: async () => {
     try {
-      const target = await window.api.appTargets.registerCurrent()
+      const context = await window.api.appTargets.detectCurrent()
+      if (context) {
+        set({ detectedContext: context })
+      }
+      return context
+    } catch (error) {
+      console.error('Failed to detect current app:', error)
+      return null
+    }
+  },
+
+  registerApp: async (matchType: MatchType, domain?: string | null) => {
+    try {
+      const target = await window.api.appTargets.registerCurrent({ matchType, domain })
       if (target) {
         set(state => ({
           appTargets: { ...state.appTargets, [target.id]: target },
+          detectedContext: null,
         }))
       }
       return target
     } catch (error) {
-      console.error('Failed to register current app:', error)
+      console.error('Failed to register app:', error)
       return null
     }
+  },
+
+  clearDetectedContext: () => {
+    set({ detectedContext: null })
   },
 
   updateAppTone: async (appId: string, toneId: string | null) => {

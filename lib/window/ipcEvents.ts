@@ -35,8 +35,9 @@ import {
   InteractionsTable,
   UserMetadataTable,
 } from '../main/sqlite/repo'
-import { AppTargetTable, ToneTable } from '../main/sqlite/appTargetRepo'
+import { AppTargetTable, ToneTable, type MatchType } from '../main/sqlite/appTargetRepo'
 import { getActiveWindow } from '../media/active-application'
+import { getBrowserUrl } from '../media/browser-url'
 import { normalizeAppTargetId } from '../utils/appTargetUtils'
 import { audioRecorderService } from '../media/audio'
 import { voiceInputService } from '../main/voiceInputService'
@@ -954,6 +955,8 @@ ipcMain.handle(
     data: {
       id: string
       name: string
+      matchType?: MatchType
+      domain?: string | null
       toneId?: string | null
       iconBase64?: string | null
     }
@@ -976,7 +979,13 @@ ipcMain.handle('app-targets:delete', async (_event, id: string) => {
   return AppTargetTable.delete(id, userId)
 })
 
-ipcMain.handle('app-targets:register-current', async () => {
+ipcMain.handle('app-targets:register-current', async (
+  _event,
+  data: {
+    matchType: MatchType
+    domain?: string | null
+  }
+) => {
   const userId = getCurrentUserId() || DEFAULT_LOCAL_USER_ID
 
   const isMac = process.platform === 'darwin'
@@ -1011,12 +1020,63 @@ ipcMain.handle('app-targets:register-current', async () => {
     return null
   }
 
-  const id = normalizeAppTargetId(appName)
+  const id = data.matchType === 'domain' && data.domain
+    ? `domain:${data.domain}`
+    : normalizeAppTargetId(appName)
+
+  const name = data.matchType === 'domain' && data.domain
+    ? data.domain
+    : appName
+
   return AppTargetTable.upsert({
     id,
     userId,
-    name: appName,
+    name,
+    matchType: data.matchType,
+    domain: data.domain,
   })
+})
+
+ipcMain.handle('app-targets:detect-current', async () => {
+  const isMac = process.platform === 'darwin'
+
+  if (isMac) {
+    app.hide()
+  } else if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.minimize()
+  }
+
+  await new Promise(resolve => setTimeout(resolve, 2500))
+
+  const window = await getActiveWindow()
+  const browserInfo = await getBrowserUrl(window)
+
+  if (isMac) {
+    app.show()
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.focus()
+    }
+  } else if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.restore()
+    mainWindow.show()
+    mainWindow.focus()
+  }
+
+  if (!window) return null
+
+  const appName = window.appName
+  const lowerName = appName.toLowerCase()
+  const blockedApps = ['electron', 'ito', 'explorer', 'finder', 'desktop', 'shell']
+  if (blockedApps.some(blocked => lowerName.includes(blocked))) {
+    return null
+  }
+
+  return {
+    appName,
+    browserUrl: browserInfo.url,
+    browserDomain: browserInfo.domain,
+    suggestedMatchType: browserInfo.domain ? 'domain' : 'app',
+  }
 })
 
 ipcMain.handle('app-targets:get-current', async () => {

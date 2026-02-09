@@ -1,19 +1,24 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useAppStylingStore } from '@/app/store/useAppStylingStore'
 import { AppStylingRow } from './AppStylingRow'
+import { RegisterAppDialog } from './RegisterAppDialog'
 import { Button } from '@/app/components/ui/button'
+import { Crosshair } from 'lucide-react'
 
 export default function AppStylingSettingsContent() {
   const {
     appTargets,
     tones,
     isLoading,
+    detectedContext,
     loadAppTargets,
     loadTones,
-    registerCurrentApp,
+    detectCurrentApp,
+    clearDetectedContext,
   } = useAppStylingStore()
 
-  const [isRegistering, setIsRegistering] = useState(false)
+  const [isDetecting, setIsDetecting] = useState(false)
+  const [dialogOpen, setDialogOpen] = useState(false)
   const [status, setStatus] = useState<string | null>(null)
 
   useEffect(() => {
@@ -21,37 +26,58 @@ export default function AppStylingSettingsContent() {
     loadTones()
   }, [loadAppTargets, loadTones])
 
-  const handleRegisterApp = useCallback(async () => {
+  useEffect(() => {
+    if (detectedContext) {
+      setDialogOpen(true)
+    }
+  }, [detectedContext])
+
+  const handleDetectApp = useCallback(async () => {
     setStatus(null)
-    setIsRegistering(true)
+    setIsDetecting(true)
 
     try {
-      const result = await registerCurrentApp()
-      if (result) {
-        setStatus(`Registered: ${result.name}`)
-        setTimeout(() => setStatus(null), 3000)
-      } else {
+      const context = await detectCurrentApp()
+      if (!context) {
         setStatus('No app detected - click on target app when window minimizes')
         setTimeout(() => setStatus(null), 5000)
       }
     } catch (error) {
-      console.error('Failed to register app:', error)
+      console.error('Failed to detect app:', error)
       setStatus('Error detecting app')
       setTimeout(() => setStatus(null), 3000)
     } finally {
-      setIsRegistering(false)
+      setIsDetecting(false)
     }
-  }, [registerCurrentApp])
+  }, [detectCurrentApp])
+
+  const handleDialogClose = (open: boolean) => {
+    setDialogOpen(open)
+    if (!open) {
+      clearDetectedContext()
+    }
+  }
 
   const sortedApps = Object.values(appTargets).sort((a, b) =>
     a.name.localeCompare(b.name)
   )
   const toneOptions = Object.values(tones).sort((a, b) => a.sortOrder - b.sortOrder)
 
-  const getButtonText = () => {
-    if (isRegistering) return 'Click target app now...'
+  const getButtonContent = () => {
+    if (isDetecting) {
+      return (
+        <>
+          <span className="animate-pulse">Click target app now...</span>
+        </>
+      )
+    }
     if (status) return status
-    return 'Register Current App'
+    return (
+      <>
+        <Crosshair className="h-4 w-4 mr-2" />
+        Detect Current App
+      </>
+    )
   }
 
   if (isLoading) {
@@ -64,16 +90,16 @@ export default function AppStylingSettingsContent() {
         <div>
           <div className="text-lg font-medium">App Styling</div>
           <p className="text-sm text-gray-600 mt-1">
-            Choose how your transcriptions sound based on which app you're
+            Choose how your transcriptions sound based on which app or website you're
             using.
           </p>
         </div>
         <Button
-          onClick={handleRegisterApp}
+          onClick={handleDetectApp}
           variant="outline"
-          disabled={isRegistering}
+          disabled={isDetecting}
         >
-          {getButtonText()}
+          {getButtonContent()}
         </Button>
       </div>
 
@@ -81,10 +107,11 @@ export default function AppStylingSettingsContent() {
         <div className="border rounded-lg p-8 text-center">
           <h3 className="font-medium mb-2">No apps registered yet</h3>
           <ol className="text-sm text-gray-600 text-left max-w-md mx-auto space-y-1">
-            <li>1. Open the app you want to style (Slack, Outlook, etc.)</li>
-            <li>2. Click "Register Current App" above</li>
-            <li>3. Click on your target app when this window minimizes</li>
-            <li>4. Select a writing style for that app</li>
+            <li>1. Open the app or website you want to style</li>
+            <li>2. Click "Detect Current App" above</li>
+            <li>3. Click on your target app/website when this window minimizes</li>
+            <li>4. Choose to match by app or domain (for browsers)</li>
+            <li>5. Select a writing style for that target</li>
           </ol>
         </div>
       ) : (
@@ -94,6 +121,12 @@ export default function AppStylingSettingsContent() {
           ))}
         </div>
       )}
+
+      <RegisterAppDialog
+        open={dialogOpen}
+        onOpenChange={handleDialogClose}
+        context={detectedContext}
+      />
     </div>
   )
 }

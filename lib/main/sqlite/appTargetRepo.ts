@@ -1,9 +1,13 @@
 import { run, get, all } from './utils'
 
+export type MatchType = 'app' | 'domain'
+
 export type AppTarget = {
   id: string
   userId: string
   name: string
+  matchType: MatchType
+  domain: string | null
   toneId: string | null
   iconBase64: string | null
   createdAt: string
@@ -27,6 +31,8 @@ type AppTargetRow = {
   id: string
   user_id: string
   name: string
+  match_type: string
+  domain: string | null
   tone_id: string | null
   icon_base64: string | null
   created_at: string
@@ -51,6 +57,8 @@ function mapAppTargetRowToAppTarget(row: AppTargetRow): AppTarget {
     id: row.id,
     userId: row.user_id,
     name: row.name,
+    matchType: (row.match_type as MatchType) || 'app',
+    domain: row.domain,
     toneId: row.tone_id,
     iconBase64: row.icon_base64,
     createdAt: row.created_at,
@@ -76,7 +84,7 @@ function mapToneRowToTone(row: ToneRow): Tone {
 export const AppTargetTable = {
   async findAll(userId: string): Promise<AppTarget[]> {
     const rows = await all<AppTargetRow>(
-      `SELECT id, user_id, name, tone_id, icon_base64, 
+      `SELECT id, user_id, name, match_type, domain, tone_id, icon_base64, 
        created_at, updated_at, deleted_at
        FROM app_targets WHERE user_id = ? AND deleted_at IS NULL ORDER BY name`,
       [userId]
@@ -86,10 +94,21 @@ export const AppTargetTable = {
 
   async findById(id: string, userId: string): Promise<AppTarget | null> {
     const row = await get<AppTargetRow>(
-      `SELECT id, user_id, name, tone_id, icon_base64,
+      `SELECT id, user_id, name, match_type, domain, tone_id, icon_base64,
        created_at, updated_at, deleted_at
        FROM app_targets WHERE id = ? AND user_id = ? AND deleted_at IS NULL`,
       [id, userId]
+    )
+    return row ? mapAppTargetRowToAppTarget(row) : null
+  },
+
+  async findByDomain(domain: string, userId: string): Promise<AppTarget | null> {
+    const row = await get<AppTargetRow>(
+      `SELECT id, user_id, name, match_type, domain, tone_id, icon_base64,
+       created_at, updated_at, deleted_at
+       FROM app_targets 
+       WHERE domain = ? AND user_id = ? AND match_type = 'domain' AND deleted_at IS NULL`,
+      [domain, userId]
     )
     return row ? mapAppTargetRowToAppTarget(row) : null
   },
@@ -98,16 +117,20 @@ export const AppTargetTable = {
     id: string
     userId: string
     name: string
+    matchType?: MatchType
+    domain?: string | null
     toneId?: string | null
     iconBase64?: string | null
   }): Promise<AppTarget> {
     const now = new Date().toISOString()
 
     await run(
-      `INSERT INTO app_targets (id, user_id, name, tone_id, icon_base64, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?)
+      `INSERT INTO app_targets (id, user_id, name, match_type, domain, tone_id, icon_base64, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(id, user_id) DO UPDATE SET
          name = excluded.name,
+         match_type = excluded.match_type,
+         domain = excluded.domain,
          tone_id = COALESCE(excluded.tone_id, app_targets.tone_id),
          icon_base64 = COALESCE(excluded.icon_base64, app_targets.icon_base64),
          updated_at = excluded.updated_at,
@@ -116,6 +139,8 @@ export const AppTargetTable = {
         data.id,
         data.userId,
         data.name,
+        data.matchType ?? 'app',
+        data.domain ?? null,
         data.toneId ?? null,
         data.iconBase64 ?? null,
         now,

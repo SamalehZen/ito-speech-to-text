@@ -136,4 +136,22 @@ export const MIGRATIONS: Migration[] = [
       DROP TABLE IF EXISTS app_targets;
     `,
   },
+  {
+    id: '20260209000000_add_match_type_and_domain_to_app_targets',
+    up: `
+      -- Add match_type column: 'app' (default) or 'domain'
+      ALTER TABLE app_targets ADD COLUMN match_type TEXT NOT NULL DEFAULT 'app';
+      
+      -- Add domain column for domain-based matching
+      ALTER TABLE app_targets ADD COLUMN domain TEXT;
+      
+      -- Create index for domain lookups
+      CREATE INDEX IF NOT EXISTS idx_app_targets_domain ON app_targets(domain) WHERE domain IS NOT NULL;
+    `,
+    down: `
+      DROP INDEX IF EXISTS idx_app_targets_domain;
+      ALTER TABLE app_targets DROP COLUMN domain;
+      ALTER TABLE app_targets DROP COLUMN match_type;
+    `,
+  },
 ]

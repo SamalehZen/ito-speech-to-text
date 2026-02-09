@@ -137,13 +137,17 @@ const api = {
     upsert: (data: {
       id: string
       name: string
+      matchType?: 'app' | 'domain'
+      domain?: string | null
       toneId?: string | null
       iconBase64?: string | null
     }) => ipcRenderer.invoke('app-targets:upsert', data),
     updateTone: (id: string, toneId: string | null) =>
       ipcRenderer.invoke('app-targets:update-tone', id, toneId),
     delete: (id: string) => ipcRenderer.invoke('app-targets:delete', id),
-    registerCurrent: () => ipcRenderer.invoke('app-targets:register-current'),
+    registerCurrent: (data: { matchType: 'app' | 'domain'; domain?: string | null }) =>
+      ipcRenderer.invoke('app-targets:register-current', data),
+    detectCurrent: () => ipcRenderer.invoke('app-targets:detect-current'),
     getCurrent: () => ipcRenderer.invoke('app-targets:get-current'),
   },
   tones: {
