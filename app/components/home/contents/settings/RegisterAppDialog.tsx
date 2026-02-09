@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -23,10 +23,14 @@ type Props = {
 
 export function RegisterAppDialog({ open, onOpenChange, context }: Props) {
   const { registerApp, clearDetectedContext } = useAppStylingStore()
-  const [selectedType, setSelectedType] = useState<MatchType>(
-    context?.suggestedMatchType || 'app'
-  )
+  const [selectedType, setSelectedType] = useState<MatchType>('app')
   const [isRegistering, setIsRegistering] = useState(false)
+
+  useEffect(() => {
+    if (context) {
+      setSelectedType(context.suggestedMatchType)
+    }
+  }, [context])
 
   const handleRegister = async () => {
     if (!context) return
@@ -34,7 +38,7 @@ export function RegisterAppDialog({ open, onOpenChange, context }: Props) {
     setIsRegistering(true)
     try {
       const domain = selectedType === 'domain' ? context.browserDomain : null
-      await registerApp(selectedType, domain)
+      await registerApp(selectedType, context.appName, domain)
       onOpenChange(false)
     } catch (error) {
       console.error('Failed to register:', error)

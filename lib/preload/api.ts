@@ -145,8 +145,6 @@ const api = {
     updateTone: (id: string, toneId: string | null) =>
       ipcRenderer.invoke('app-targets:update-tone', id, toneId),
     delete: (id: string) => ipcRenderer.invoke('app-targets:delete', id),
-    registerCurrent: (data: { matchType: 'app' | 'domain'; domain?: string | null }) =>
-      ipcRenderer.invoke('app-targets:register-current', data),
     detectCurrent: () => ipcRenderer.invoke('app-targets:detect-current'),
     getCurrent: () => ipcRenderer.invoke('app-targets:get-current'),
   },

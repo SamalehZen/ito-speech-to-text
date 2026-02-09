@@ -35,7 +35,7 @@ import {
   InteractionsTable,
   UserMetadataTable,
 } from '../main/sqlite/repo'
-import { AppTargetTable, ToneTable, type MatchType } from '../main/sqlite/appTargetRepo'
+import { AppTargetTable, ToneTable } from '../main/sqlite/appTargetRepo'
 import { getActiveWindow } from '../media/active-application'
 import { getBrowserUrl } from '../media/browser-url'
 import { normalizeAppTargetId } from '../utils/appTargetUtils'
@@ -977,64 +977,6 @@ ipcMain.handle(
 ipcMain.handle('app-targets:delete', async (_event, id: string) => {
   const userId = getCurrentUserId() || DEFAULT_LOCAL_USER_ID
   return AppTargetTable.delete(id, userId)
-})
-
-ipcMain.handle('app-targets:register-current', async (
-  _event,
-  data: {
-    matchType: MatchType
-    domain?: string | null
-  }
-) => {
-  const userId = getCurrentUserId() || DEFAULT_LOCAL_USER_ID
-
-  const isMac = process.platform === 'darwin'
-
-  if (isMac) {
-    app.hide()
-  } else if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.minimize()
-  }
-
-  await new Promise(resolve => setTimeout(resolve, 2500))
-
-  const window = await getActiveWindow()
-
-  if (isMac) {
-    app.show()
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.focus()
-    }
-  } else if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.restore()
-    mainWindow.show()
-    mainWindow.focus()
-  }
-
-  if (!window) return null
-
-  const appName = window.appName
-  const lowerName = appName.toLowerCase()
-  const blockedApps = ['electron', 'ito', 'explorer', 'finder', 'desktop', 'shell']
-  if (blockedApps.some(blocked => lowerName.includes(blocked))) {
-    return null
-  }
-
-  const id = data.matchType === 'domain' && data.domain
-    ? `domain:${data.domain}`
-    : normalizeAppTargetId(appName)
-
-  const name = data.matchType === 'domain' && data.domain
-    ? data.domain
-    : appName
-
-  return AppTargetTable.upsert({
-    id,
-    userId,
-    name,
-    matchType: data.matchType,
-    domain: data.domain,
-  })
 })
 
 ipcMain.handle('app-targets:detect-current', async () => {

@@ -43,7 +43,7 @@ type AppStylingState = {
   loadAppTargets: () => Promise<void>
   loadTones: () => Promise<void>
   detectCurrentApp: () => Promise<DetectedContext | null>
-  registerApp: (matchType: MatchType, domain?: string | null) => Promise<AppTarget | null>
+  registerApp: (matchType: MatchType, appName: string, domain?: string | null) => Promise<AppTarget | null>
   updateAppTone: (appId: string, toneId: string | null) => Promise<void>
   deleteAppTarget: (appId: string) => Promise<void>
   getCurrentAppTarget: () => Promise<AppTarget | null>
@@ -103,9 +103,20 @@ export const useAppStylingStore = create<AppStylingState>((set) => ({
     }
   },
 
-  registerApp: async (matchType: MatchType, domain?: string | null) => {
+  registerApp: async (matchType: MatchType, appName: string, domain?: string | null) => {
     try {
-      const target = await window.api.appTargets.registerCurrent({ matchType, domain })
+      const id = matchType === 'domain' && domain
+        ? `domain:${domain}`
+        : appName.toLowerCase().replace(/[^a-z0-9]/g, '-')
+
+      const name = matchType === 'domain' && domain ? domain : appName
+
+      const target = await window.api.appTargets.upsert({
+        id,
+        name,
+        matchType,
+        domain: domain ?? null,
+      })
       if (target) {
         set(state => ({
           appTargets: { ...state.appTargets, [target.id]: target },
