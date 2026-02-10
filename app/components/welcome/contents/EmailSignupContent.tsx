@@ -3,7 +3,6 @@ import { Button } from '@/app/components/ui/button'
 import { AppOrbitImage } from '@/app/components/ui/app-orbit-image'
 import { isValidEmail, isStrongPassword } from '@/app/utils/utils'
 import { useAuth } from '@/app/components/auth/useAuth'
-import CheckEmailContent from './CheckEmailContent'
 import { EXTERNAL_LINKS } from '@/lib/constants/external-links'
 
 type Props = {
@@ -28,20 +27,16 @@ export default function EmailSignupContent({
     return emailOk && passwordOk && nameOk
   }, [emailOk, password, fullName])
 
-  const { createDatabaseUser } = useAuth()
-  const [showCheckEmail, setShowCheckEmail] = useState(false)
+  const { createDatabaseUser, isAuthenticated } = useAuth()
   const [isCreating, setIsCreating] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
-  const [dbUserId, setDbUserId] = useState<string | null>(null)
 
   const handleCreate = async () => {
     if (!emailOk || !isStrongPassword(password) || !fullName.trim()) return
     try {
       setIsCreating(true)
       setErrorMessage(null)
-      const res = await createDatabaseUser(email, password, fullName.trim())
-      setDbUserId(res._id)
-      setShowCheckEmail(true)
+      await createDatabaseUser(email, password, fullName.trim())
     } finally {
       setIsCreating(false)
     }
@@ -57,15 +52,8 @@ export default function EmailSignupContent({
     }
   }
 
-  if (showCheckEmail) {
-    return (
-      <CheckEmailContent
-        email={email}
-        password={password}
-        dbUserId={dbUserId}
-        onUseAnotherEmail={onBack}
-      />
-    )
+  if (isAuthenticated) {
+    return null
   }
 
   return (
