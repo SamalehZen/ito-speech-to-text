@@ -63,22 +63,29 @@ export const useDictionaryStore = create<DictionaryStore>((set, get) => ({
 
   loadEntries: async () => {
     try {
+      console.log('[DEBUG][Dictionary] Loading entries...')
       const items = await window.api.dictionary.getAll()
+      console.log('[DEBUG][Dictionary] Loaded items:', items)
       const entries = items.map(mapItemToEntry)
       set({ entries })
     } catch (error) {
-      console.error('Failed to load dictionary from database:', error)
+      console.error('[DEBUG][Dictionary] Failed to load:', error)
     }
   },
 
   addEntry: async (content: string) => {
     const { user } = useAuthStore.getState()
-    if (!user) return
+    console.log('[DEBUG][Dictionary] addEntry - user:', user?.id)
+    if (!user) {
+      console.error('[DEBUG][Dictionary] addEntry - NO USER, aborting')
+      return
+    }
     const result = await window.api.dictionary.add({
       user_id: user.id,
       word: content.trim(),
       pronunciation: null,
     })
+    console.log('[DEBUG][Dictionary] addEntry - result:', result)
     if (!result.success) {
       throw new Error(result.error)
     }
