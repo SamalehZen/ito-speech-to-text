@@ -23,7 +23,7 @@ import { EXTERNAL_LINKS } from '@/lib/constants/external-links'
 import { isValidEmail } from '@/app/utils/utils'
 
 export default function CreateAccountContent() {
-  const { incrementOnboardingStep, initializeOnboarding } = useOnboardingStore()
+  const { initializeOnboarding } = useOnboardingStore()
   const [isServerHealthy, setIsServerHealthy] = useState(true)
   const [isSelfHostedModalOpen, setIsSelfHostedModalOpen] = useState(false)
   const [email, setEmail] = useState('')
@@ -45,13 +45,6 @@ export default function CreateAccountContent() {
   const userName = user?.name
 
   const addEntry = useDictionaryStore(state => state.addEntry)
-
-  // If user is authenticated, proceed to next step
-  useEffect(() => {
-    if (isAuthenticated && user) {
-      incrementOnboardingStep()
-    }
-  }, [isAuthenticated, user, incrementOnboardingStep])
 
   useEffect(() => {
     if (userName && !isDictInitialized.current) {

@@ -16,7 +16,7 @@ import { useAuthStore } from '@/app/store/useAuthStore'
 import IntroducingIntelligentModeContent from './contents/IntroducingIntelligentModeContent'
 
 export default function WelcomeKit() {
-  const { onboardingStep } = useOnboardingStore()
+  const { onboardingStep, incrementOnboardingStep } = useOnboardingStore()
   const { isAuthenticated, user } = useAuthStore()
 
   const onboardingStepOrder = [
@@ -49,15 +49,22 @@ export default function WelcomeKit() {
       })
   }, [setAccessibilityEnabled, setMicrophoneEnabled])
 
-  // Show signin/signup based on whether user has previous auth data
+  useEffect(() => {
+    if (isAuthenticated && onboardingStep === 0) {
+      incrementOnboardingStep()
+    }
+  }, [isAuthenticated, onboardingStep, incrementOnboardingStep])
+
   if (!isAuthenticated) {
     if (user) {
-      // Returning user who needs to sign back in
       return <SignInContent />
     } else {
-      // New user who needs to create an account
       return <CreateAccountContent />
     }
+  }
+
+  if (onboardingStep === 0) {
+    return null
   }
 
   const CurrentComponent = onboardingStepOrder[onboardingStep]
