@@ -44,7 +44,6 @@ import {
 } from '../main/store'
 import { getSelectedTextString } from '../media/selected-text-reader'
 import { ensureValidTokens } from '../auth/events'
-import { Auth0Config } from '../auth/config'
 import { getActiveWindow } from '../media/active-application'
 import { STORE_KEYS } from '../constants/store-keys.js'
 
@@ -238,7 +237,7 @@ class GrpcClient {
         this.isRefreshingTokens = true
 
         // Attempt to refresh tokens
-        const refreshResult = await ensureValidTokens(Auth0Config)
+        const refreshResult = await ensureValidTokens()
 
         if (
           refreshResult.success &&

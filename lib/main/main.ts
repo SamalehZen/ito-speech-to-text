@@ -27,7 +27,6 @@ import { macOSAccessibilityContextProvider } from '../media/macOSAccessibilityCo
 import { voiceInputService } from './voiceInputService'
 import { initializeMicrophoneSelection } from '../media/microphoneSetUp'
 import { validateStoredTokens, ensureValidTokens } from '../auth/events'
-import { Auth0Config, validateAuth0Config } from '../auth/config'
 import { createAppTray } from './tray'
 import { itoSessionManager } from './itoSessionManager'
 import { initializeAutoUpdater } from './autoUpdaterWrapper'
@@ -64,18 +63,8 @@ app.whenReady().then(async () => {
   // Initialize logging after DB + store so batched log persistence can write
   initializeLogging()
 
-  // Validate Auth0 configuration
-  try {
-    validateAuth0Config()
-  } catch (error) {
-    console.error('Auth0 configuration error:', error)
-    console.warn(
-      'Token refresh will be disabled due to missing Auth0 configuration',
-    )
-  }
-
   // Validate stored tokens before using them (will attempt refresh if needed)
-  const tokensAreValid = await validateStoredTokens(Auth0Config)
+  const tokensAreValid = await validateStoredTokens()
 
   // If we have valid tokens from a previous session, set the auth token
   if (tokensAreValid) {
@@ -172,7 +161,7 @@ app.whenReady().then(async () => {
   setInterval(
     async () => {
       try {
-        await ensureValidTokens(Auth0Config)
+        await ensureValidTokens()
       } catch (error) {
         console.error('Periodic token refresh failed:', error)
       }

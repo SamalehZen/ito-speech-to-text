@@ -40,7 +40,7 @@ export default function EmailSignupContent({
       setIsCreating(true)
       setErrorMessage(null)
       const res = await createDatabaseUser(email, password, fullName.trim())
-      setDbUserId(`auth0|${res._id}`)
+      setDbUserId(res._id)
       setShowCheckEmail(true)
     } finally {
       setIsCreating(false)

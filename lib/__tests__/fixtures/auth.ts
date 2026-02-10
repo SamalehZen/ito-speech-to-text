@@ -7,24 +7,6 @@ export const EXPIRED_JWT_TOKEN =
 
 export const MALFORMED_JWT_TOKEN = 'invalid.jwt.token'
 
-// Auth0 configuration fixtures
-export const VALID_AUTH0_CONFIG = {
-  domain: 'test-domain.auth0.com',
-  clientId: 'test-client-id',
-  audience: 'https://api.test.com',
-  redirectUri: 'http://localhost:3000/callback',
-  scope: 'openid profile email offline_access',
-  useRefreshTokens: true,
-  cacheLocation: 'localstorage' as const,
-}
-
-export const INCOMPLETE_AUTH0_CONFIG = {
-  domain: 'test-domain.auth0.com',
-  clientId: '', // Missing client ID
-  audience: 'https://api.test.com',
-  redirectUri: 'http://localhost:3000/callback',
-}
-
 // Token response fixtures
 export const VALID_TOKEN_RESPONSE = {
   access_token: VALID_JWT_TOKEN,
@@ -112,18 +94,6 @@ export const createFailedTokenResponse = (
   text: async () => JSON.stringify(error),
 })
 
-// Environment variable mocks for Auth0 config
-export const VALID_ENV_VARS = {
-  VITE_AUTH0_DOMAIN: 'test-domain.auth0.com',
-  VITE_AUTH0_CLIENT_ID: 'test-client-id',
-  VITE_AUTH0_AUDIENCE: 'https://api.test.com',
-}
-
-export const INCOMPLETE_ENV_VARS = {
-  VITE_AUTH0_DOMAIN: 'test-domain.auth0.com',
-  VITE_AUTH0_CLIENT_ID: '', // Missing
-  VITE_AUTH0_AUDIENCE: 'https://api.test.com',
-}
 
 // Helper functions
 export const createTokensWithExpiry = (expiresInMinutes: number) => ({
