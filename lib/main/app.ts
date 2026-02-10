@@ -50,7 +50,7 @@ export function createAppWindow(): BrowserWindow {
           ...details.responseHeaders,
           'Content-Security-Policy': [
             "default-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
-              "connect-src 'self' https://*.posthog.com https://app.posthog.com https://eu.posthog.com https://us.i.posthog.com; " +
+              "connect-src 'self' https://*.supabase.co https://*.posthog.com https://app.posthog.com https://eu.posthog.com https://us.i.posthog.com; " +
               "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
               "style-src 'self' 'unsafe-inline'; " +
               "img-src 'self' data: res:; " +
