@@ -27,6 +27,12 @@ export const SupabaseProvider: React.FC<SupabaseProviderProps> = ({
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(!AUTH_DISABLED && !!supabase)
 
+  console.log('[DEBUG][SupabaseProvider] Init:', {
+    AUTH_DISABLED,
+    hasSupabase: !!supabase,
+    isLoading: !AUTH_DISABLED && !!supabase,
+  })
+
   useEffect(() => {
     if (AUTH_DISABLED || !supabase) {
       setIsLoading(false)

@@ -54,8 +54,14 @@ export function useAuth() {
   }, [session, supabaseUser, storedUser])
 
   const isAuthenticated = useMemo(() => {
-    if (AUTH_DISABLED) return true
-    return !!session && !!supabaseUser
+    const result = AUTH_DISABLED ? true : (!!session && !!supabaseUser)
+    console.log('[DEBUG][useAuth] isAuthenticated:', {
+      AUTH_DISABLED,
+      hasSession: !!session,
+      hasSupabaseUser: !!supabaseUser,
+      result,
+    })
+    return result
   }, [session, supabaseUser])
 
   const isLoading = useMemo(() => {

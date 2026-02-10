@@ -19,6 +19,12 @@ export default function WelcomeKit() {
   const { onboardingStep, incrementOnboardingStep } = useOnboardingStore()
   const { isAuthenticated, user } = useAuthStore()
 
+  console.log('[DEBUG][WelcomeKit] State:', {
+    isAuthenticated,
+    user: user?.id,
+    onboardingStep,
+  })
+
   const onboardingStepOrder = [
     CreateAccountContent,
     ReferralContent,
@@ -59,15 +65,24 @@ export default function WelcomeKit() {
 
   if (!isAuthenticated) {
     if (user) {
+      console.log('[DEBUG][WelcomeKit] Rendering: SignInContent (user exists but not authenticated)')
       return <SignInContent />
     } else {
+      console.log('[DEBUG][WelcomeKit] Rendering: CreateAccountContent (no user)')
       return <CreateAccountContent />
     }
   }
 
   const CurrentComponent = onboardingStepOrder[onboardingStep]
 
+  console.log('[DEBUG][WelcomeKit] CurrentComponent:', {
+    onboardingStep,
+    componentName: CurrentComponent?.name || 'undefined',
+    totalSteps: onboardingStepOrder.length,
+  })
+
   if (!CurrentComponent) {
+    console.error('[DEBUG][WelcomeKit] ERROR: No component found for step', onboardingStep)
     return (
       <div className="w-full h-full bg-background flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-foreground"></div>
@@ -75,6 +90,7 @@ export default function WelcomeKit() {
     )
   }
 
+  console.log('[DEBUG][WelcomeKit] Rendering:', CurrentComponent.name)
   return (
     <div className="w-full h-full bg-background">
       <CurrentComponent />

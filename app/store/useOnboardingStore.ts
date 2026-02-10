@@ -80,6 +80,8 @@ const getStepName = (step: number): string => {
 const getInitialState = () => {
   const storedOnboarding = window.electron?.store?.get(STORE_KEYS.ONBOARDING)
 
+  console.log('[DEBUG][OnboardingStore] Initial state from electron-store:', storedOnboarding)
+
   return {
     onboardingStep: storedOnboarding?.onboardingStep ?? 0,
     onboardingCompleted: storedOnboarding?.onboardingCompleted ?? false,
