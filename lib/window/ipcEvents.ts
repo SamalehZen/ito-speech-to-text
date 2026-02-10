@@ -20,15 +20,12 @@ import {
 } from '../media/keyboard'
 import { getPillWindow, mainWindow } from '../main/app'
 import {
-  generateNewAuthState,
-  exchangeAuthCode,
   handleLogin,
   handleLogout,
   ensureValidTokens,
 } from '../auth/events'
 import { KeyValueStore } from '../main/sqlite/repo'
 import { machineId } from 'node-machine-id'
-import { Auth0Config, Auth0Connections } from '../auth/config'
 import {
   NotesTable,
   DictionaryTable,
@@ -183,10 +180,6 @@ export function registerIPC() {
   )
 
   // Auth
-  handleIPC('generate-new-auth-state', () => generateNewAuthState())
-  handleIPC('exchange-auth-code', async (_e, { authCode, state, config }) =>
-    exchangeAuthCode(_e, { authCode, state, config }),
-  )
   handleIPC('logout', () => handleLogout())
   handleIPC(
     'notify-login-success',
@@ -221,7 +214,7 @@ export function registerIPC() {
   // Token refresh handler
   handleIPC('refresh-tokens', async () => {
     try {
-      const result = await ensureValidTokens(Auth0Config)
+      const result = await ensureValidTokens()
       return result
     } catch (error) {
       console.error('Manual token refresh failed:', error)
@@ -326,115 +319,7 @@ export function registerIPC() {
       shell.openExternal(mailtoUrl)
     }
   })
-  // Auth0 DB signup proxy (avoids CORS issues from custom schemes)
-  handleIPC('auth0-db-signup', async (_e, { email, password, name }) => {
-    try {
-      const url = `https://${Auth0Config.domain}/dbconnections/signup`
-      const payload: any = {
-        client_id: Auth0Config.clientId,
-        email,
-        password,
-        name,
-        connection: Auth0Connections.database,
-      }
-
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-      let data: any
-      try {
-        data = await res.json()
-      } catch {
-        data = undefined
-      }
-      if (!res.ok) {
-        const message =
-          data?.description ||
-          data?.error ||
-          `Auth0 signup failed (${res.status})`
-        return { success: false, error: message, status: res.status }
-      }
-      console.log('[IPC] auth0-db-signup response', res.status, data)
-      return { success: true, data }
-    } catch (error: any) {
-      return { success: false, error: error?.message || 'Network error' }
-    }
-  })
-
-  // Auth0 DB login via Password Realm (Resource Owner Password) grant
-  handleIPC('auth0-db-login', async (_e, { email, password }) => {
-    try {
-      if (!email || !password) {
-        return { success: false, error: 'Missing email or password' }
-      }
-      const url = `https://${Auth0Config.domain}/oauth/token`
-      const payload: any = {
-        grant_type: 'http://auth0.com/oauth/grant-type/password-realm',
-        client_id: Auth0Config.clientId,
-        username: email,
-        password,
-        realm: Auth0Connections.database,
-        scope: Auth0Config.scope,
-      }
-      if (Auth0Config.audience) {
-        payload.audience = Auth0Config.audience
-      }
-
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-      let data: any
-      try {
-        data = await res.json()
-      } catch {
-        data = undefined
-      }
-      if (!res.ok) {
-        const message =
-          data?.error_description ||
-          data?.error ||
-          `Auth0 login failed (${res.status})`
-        return { success: false, error: message, status: res.status }
-      }
-
-      return {
-        success: true,
-        tokens: {
-          id_token: data?.id_token || null,
-          access_token: data?.access_token || null,
-          refresh_token: data?.refresh_token || null,
-          scope: data?.scope || null,
-          expires_in: data?.expires_in || null,
-          token_type: data?.token_type || null,
-        },
-      }
-    } catch (error: any) {
-      return { success: false, error: error?.message || 'Network error' }
-    }
-  })
-
-  // Send verification email via server proxy
-  handleIPC('auth0-send-verification', async (_e, { dbUserId }) => {
-    if (!dbUserId) return { success: false, error: 'Missing user identifier' }
-    return itoHttpClient.post('/auth0/send-verification', {
-      dbUserId,
-      clientId: Auth0Config.clientId,
-    })
-  })
-
-  // Check if email exists for db signup and whether it's verified (via server proxy)
-  handleIPC('auth0-check-email', async (_e, { email }) => {
-    if (!email) return { success: false, error: 'Missing email' }
-    return itoHttpClient.get(
-      `/auth0/users-by-email?email=${encodeURIComponent(email)}`,
-    )
-  })
-
-  // Trial routes proxy
+// Trial routes proxy
   handleIPC('trial:complete', async () => {
     return itoHttpClient.post('/trial/complete')
   })
