@@ -78,6 +78,9 @@ export function useAuth() {
     }
 
     if (session && supabaseUser && authUser) {
+      if (storeIsAuthenticated && storedUser?.id === supabaseUser.id) {
+        return
+      }
       const authTokens: AuthTokens = {
         access_token: session.access_token,
         id_token: session.access_token,
@@ -86,7 +89,7 @@ export function useAuth() {
       }
       setAuthData(authTokens, authUser, 'email')
     }
-  }, [session, supabaseUser, authUser, setAuthData, storeIsAuthenticated, setSelfHostedMode])
+  }, [session, supabaseUser, authUser, setAuthData, storeIsAuthenticated, setSelfHostedMode, storedUser?.id])
 
   const signupWithEmail = useCallback(
     async (email: string, password: string, fullName?: string) => {
