@@ -1,7 +1,6 @@
 import { fastify } from 'fastify'
 import { fastifyConnectPlugin } from '@connectrpc/connect-fastify'
 import { createContextValues } from '@connectrpc/connect'
-import Auth0 from '@auth0/auth0-fastify-api'
 import itoServiceRoutes from './services/ito/itoService.js'
 import timingServiceRoutes from './services/ito/timingService.js'
 import { kUser } from './auth/userContext.js'
@@ -9,9 +8,8 @@ import { errorInterceptor } from './services/errorInterceptor.js'
 import { loggingInterceptor } from './services/loggingInterceptor.js'
 import { createValidationInterceptor } from './services/validationInterceptor.js'
 import { renderCallbackPage } from './utils/renderCallback.js'
-import dotenv from 'dotenv'
+import 'dotenv/config'
 import { registerLoggingRoutes } from './services/logging.js'
-import { registerAuth0Routes } from './services/auth0.js'
 import { IpLinkRepository } from './db/repo.js'
 import { registerTrialRoutes } from './services/trial.js'
 import {
@@ -20,10 +18,8 @@ import {
 } from './services/billing.js'
 import { registerStripeWebhook } from './services/stripeWebhook.js'
 import cors from '@fastify/cors'
+import { verifySupabaseToken, SupabaseJwtPayload } from './auth/supabaseJwt.js'
 
-dotenv.config()
-
-// Create the main server function
 export const startServer = async () => {
   const connectRpcServer = fastify({
     logger: process.env.SHOW_ALL_REQUEST_LOGS === 'true',
@@ -32,63 +28,44 @@ export const startServer = async () => {
 
   await connectRpcServer.register(cors, { origin: '*' })
 
-  // Register the Auth0 plugin
   const REQUIRE_AUTH = process.env.REQUIRE_AUTH === 'true'
   const CLIENT_LOG_GROUP_NAME = process.env.CLIENT_LOG_GROUP_NAME
 
+  connectRpcServer.decorateRequest('user', null)
+
   if (REQUIRE_AUTH) {
-    const AUTH0_DOMAIN = process.env.AUTH0_DOMAIN
-    const AUTH0_AUDIENCE = process.env.AUTH0_AUDIENCE
-    const AUTH0_CLIENT_ID = process.env.AUTH0_CLIENT_ID
-    const AUTH0_CALLBACK_URL = process.env.AUTH0_CALLBACK_URL
-
-    if (
-      !AUTH0_DOMAIN ||
-      !AUTH0_AUDIENCE ||
-      !AUTH0_CLIENT_ID ||
-      !AUTH0_CALLBACK_URL
-    ) {
-      connectRpcServer.log.error('Auth0 configuration missing in .env file')
-      process.exit(1)
-    }
-
-    await connectRpcServer.register(Auth0, {
-      domain: AUTH0_DOMAIN,
-      audience: AUTH0_AUDIENCE,
-    })
-
-    connectRpcServer.get('/login', async (request, reply) => {
-      const { state } = request.query as { state?: string }
-
-      if (!state || typeof state !== 'string') {
-        reply.status(400).send('Missing or invalid state parameter')
+    connectRpcServer.addHook('onRequest', async (request, reply) => {
+      if (
+        request.url === '/' ||
+        request.url === '/health' ||
+        request.url.startsWith('/stripe/webhook') ||
+        request.url.startsWith('/billing/success') ||
+        request.url.startsWith('/billing/cancel') ||
+        request.url.startsWith('/link/')
+      ) {
         return
       }
 
-      const redirectUrl = new URL(`https://${AUTH0_DOMAIN}/authorize`)
-      redirectUrl.searchParams.set('response_type', 'code')
-      redirectUrl.searchParams.set('client_id', AUTH0_CLIENT_ID)
-      redirectUrl.searchParams.set('redirect_uri', AUTH0_CALLBACK_URL)
-      redirectUrl.searchParams.set(
-        'scope',
-        'openid profile email offline_access',
-      )
-      redirectUrl.searchParams.set('state', state)
+      const authHeader = request.headers.authorization
+      if (!authHeader?.startsWith('Bearer ')) {
+        reply.code(401).send({ error: 'Missing authorization header' })
+        return
+      }
 
-      reply.redirect(redirectUrl.toString(), 302)
+      try {
+        const token = authHeader.slice(7)
+        const payload = await verifySupabaseToken(token)
+        ;(request as any).user = payload
+      } catch (error) {
+        reply.code(401).send({ error: 'Invalid token' })
+      }
     })
   }
 
-  // Register Auth0 management proxy routes at the root level (no auth required)
-  await registerAuth0Routes(connectRpcServer)
+  registerBillingPublicRoutes(connectRpcServer)
 
-  // Public billing routes (no auth)
-  await registerBillingPublicRoutes(connectRpcServer)
+  registerStripeWebhook(connectRpcServer)
 
-  // Stripe webhook (public)
-  await registerStripeWebhook(connectRpcServer)
-
-  // Register IP correlation candidate (from website click)
   connectRpcServer.post('/link/register-ip', async (request, reply) => {
     try {
       const { websiteDistinctId } = (request.body ?? {}) as {
@@ -99,7 +76,6 @@ export const startServer = async () => {
         return
       }
 
-      // Hash IP with a server-side salt to avoid storing raw IP
       const ip = (request.ip || '').trim()
       const salt = process.env.IP_SALT || 'ito-default-salt'
       const hash = await import('crypto').then(({ createHash }) =>
@@ -131,12 +107,21 @@ export const startServer = async () => {
     }
   })
 
-  // Register Connect RPC plugin in a context that conditionally applies Auth0 authentication
+  connectRpcServer.get('/me', async (request, reply) => {
+    const user = (request as any).user as SupabaseJwtPayload
+    if (!user) {
+      return reply.code(401).send({ error: 'Not authenticated' })
+    }
+    return {
+      sub: user.sub,
+      email: user.email,
+      name: user.user_metadata?.full_name || user.user_metadata?.name || user.email,
+    }
+  })
+
   await connectRpcServer.register(async function (fastify) {
-    // Apply Auth0 authentication to all routes in this context only if REQUIRE_AUTH is true
     if (REQUIRE_AUTH) {
       console.log('Authentication is ENABLED.')
-      fastify.addHook('preHandler', fastify.requireAuth())
     } else {
       console.log('Authentication is DISABLED.')
     }
@@ -153,22 +138,20 @@ export const startServer = async () => {
       console.log('SHOW_ALL_REQUEST_LOGS is DISABLED.')
     }
 
-    // Register the Connect RPC plugin with our service routes and interceptors
     await fastify.register(fastifyConnectPlugin, {
       routes: router => {
         itoServiceRoutes(router)
         timingServiceRoutes(router)
       },
-      // Order matters: logging -> validation -> error handling
       interceptors: [
         loggingInterceptor,
         createValidationInterceptor(),
         errorInterceptor,
       ],
       contextValues: request => {
-        // Pass Auth0 user info from Fastify request to Connect RPC context
-        if (REQUIRE_AUTH && request.user && request.user.sub) {
-          return createContextValues().set(kUser, request.user)
+        const user = (request as any).user
+        if (REQUIRE_AUTH && user && user.sub) {
+          return createContextValues().set(kUser, user)
         }
         return createContextValues()
       },
@@ -184,7 +167,6 @@ export const startServer = async () => {
     await registerBillingRoutes(fastify, { requireAuth: REQUIRE_AUTH })
   })
 
-  // Error handling - this handles Fastify-level errors, not RPC errors
   connectRpcServer.setErrorHandler((error, _, reply) => {
     connectRpcServer.log.error(error)
     reply.status(500).send({
@@ -193,13 +175,11 @@ export const startServer = async () => {
     })
   })
 
-  // Basic REST route for health check
   connectRpcServer.get('/', async (_, reply) => {
     reply.type('text/plain')
     reply.send('Welcome to the Ito Connect RPC server!')
   })
 
-  // Callback endpoint (alternative route for same functionality)
   connectRpcServer.get('/callback', async (request, reply) => {
     const { code, state } = request.query as {
       code: string
@@ -212,7 +192,6 @@ export const startServer = async () => {
     reply.send(html)
   })
 
-  // Start the server
   const rpcPort = Number(process.env.PORT) || 3000
   const host = '0.0.0.0'
 

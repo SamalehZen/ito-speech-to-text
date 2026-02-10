@@ -174,7 +174,7 @@ mock.module('stripe', () => {
   }
 })
 
-// Mock fetch for Auth0 API calls
+// Mock fetch for external API calls
 global.fetch = mockFetch as any
 
 import { registerTrialRoutes } from './trial.js'
@@ -200,32 +200,10 @@ describe('registerTrialRoutes', () => {
     envReset.set({
       STRIPE_SECRET_KEY: 'sk_test_123',
       STRIPE_PRICE_ID: 'price_test123',
-      AUTH0_DOMAIN: 'test.auth0.com',
-      AUTH0_MGMT_CLIENT_ID: 'test_client_id',
-      AUTH0_MGMT_CLIENT_SECRET: 'test_client_secret',
     })
 
-    // Mock Auth0 Management API calls
-    mockFetch.mockImplementation((url: string | Request | URL) => {
-      const urlStr = typeof url === 'string' ? url : url.toString()
-      if (urlStr.includes('/oauth/token')) {
-        return Promise.resolve(
-          new Response(JSON.stringify({ access_token: 'mock_token' }), {
-            status: 200,
-          }),
-        )
-      }
-      if (urlStr.includes('/api/v2/users/')) {
-        return Promise.resolve(
-          new Response(
-            JSON.stringify({
-              email: 'test@example.com',
-              name: 'Test User',
-            }),
-            { status: 200 },
-          ),
-        )
-      }
+    // Mock external API calls (Stripe uses fetch internally)
+    mockFetch.mockImplementation(() => {
       return Promise.resolve(new Response('{}', { status: 200 }))
     })
   })

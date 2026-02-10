@@ -1,12 +1,15 @@
 import { createContextKey } from '@connectrpc/connect'
 
-// Auth0 user type based on the user object structure
-export interface Auth0User {
+export interface AuthUser {
   sub?: string
+  email?: string
+  user_metadata?: {
+    full_name?: string
+    name?: string
+  }
   [key: string]: any
 }
 
-// Create a type-safe context key for the authenticated user
-export const kUser = createContextKey<Auth0User | undefined>(undefined, {
-  description: 'Authenticated Auth0 user',
+export const kUser = createContextKey<AuthUser | undefined>(undefined, {
+  description: 'Authenticated user from Supabase JWT',
 })
