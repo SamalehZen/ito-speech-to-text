@@ -14,7 +14,9 @@ export interface HealthCheckResult {
  */
 export async function checkLocalServerHealth(): Promise<HealthCheckResult> {
   try {
-    // Use the main process to check server health via HTTP
+    if (!window.api?.checkServerHealth) {
+      return { isHealthy: false, error: 'API not available' }
+    }
     const result = await window.api.checkServerHealth()
 
     return {

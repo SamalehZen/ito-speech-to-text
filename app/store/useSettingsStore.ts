@@ -47,7 +47,7 @@ type SettingCategory = 'general' | 'audio&mic' | 'keyboard' | 'account'
 
 // Initialize from electron store
 const getInitialState = () => {
-  const storedSettings = window.electron.store.get(STORE_KEYS.SETTINGS)
+  const storedSettings = window.electron?.store?.get(STORE_KEYS.SETTINGS)
 
   return {
     shareAnalytics: storedSettings?.shareAnalytics ?? true,
@@ -80,7 +80,7 @@ const getInitialState = () => {
 
 // Sync to electron store
 const syncToStore = (state: Partial<SettingsState>) => {
-  const currentSettings = window.electron.store.get(STORE_KEYS.SETTINGS) || {}
+  const currentSettings = window.electron?.store?.get(STORE_KEYS.SETTINGS) || {}
 
   // A much simpler and more robust way to merge the settings.
   // This takes all existing settings and overwrites them with only the keys
@@ -90,7 +90,7 @@ const syncToStore = (state: Partial<SettingsState>) => {
     ...state,
   }
 
-  window.electron.store.set(STORE_KEYS.SETTINGS, updatedSettings)
+  window.electron?.store?.set(STORE_KEYS.SETTINGS, updatedSettings)
 
   // Notify pill window of settings changes
   if (window.api?.notifySettingsUpdate) {
@@ -313,7 +313,7 @@ if (typeof window !== 'undefined' && window.api?.loginItem?.getSettings) {
   window.api.loginItem
     .getSettings()
     .then(settings => {
-      const storedSettings = window.electron.store.get(STORE_KEYS.SETTINGS)
+      const storedSettings = window.electron?.store?.get(STORE_KEYS.SETTINGS)
       if (settings.openAtLogin !== storedSettings?.launchAtLogin) {
         useSettingsStore.getState().setLaunchAtLogin(settings.openAtLogin)
       }
@@ -327,12 +327,12 @@ if (typeof window !== 'undefined' && window.api?.loginItem?.getSettings) {
 }
 
 if (typeof window !== 'undefined' && window.api?.dock?.getVisibility) {
-  window.api.invoke('init-window').then((windowInfo: any) => {
+  window.api?.invoke('init-window').then((windowInfo: any) => {
     if (windowInfo.platform === 'darwin') {
-      window.api.dock
-        .getVisibility()
+      window.api?.dock
+        ?.getVisibility()
         .then(dockSettings => {
-          const storedSettings = window.electron.store.get(STORE_KEYS.SETTINGS)
+          const storedSettings = window.electron?.store?.get(STORE_KEYS.SETTINGS)
           if (dockSettings.isVisible !== storedSettings?.showAppInDock) {
             useSettingsStore.getState().setShowAppInDock(dockSettings.isVisible)
           }

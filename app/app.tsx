@@ -32,7 +32,7 @@ const MainApp = () => {
 
   // If authenticated and onboarding completed, show main app
   if (isAuthenticated && onboardingCompleted) {
-    window.api.send(
+    window.api?.send(
       'electron-store-set',
       'settings.isShortcutGloballyEnabled',
       shouldEnableShortcutGlobally,
@@ -41,7 +41,7 @@ const MainApp = () => {
   }
 
   // If authenticated but onboarding not completed, continue onboarding
-  window.api.send(
+  window.api?.send(
     'electron-store-set',
     'settings.isShortcutGloballyEnabled',
     shouldEnableShortcutGlobally,

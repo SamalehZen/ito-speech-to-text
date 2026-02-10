@@ -37,16 +37,18 @@ export default function WelcomeKit() {
 
   useEffect(() => {
     window.api
-      .invoke('check-accessibility-permission', false)
+      ?.invoke('check-accessibility-permission', false)
       .then((enabled: boolean) => {
         setAccessibilityEnabled(enabled)
       })
+      .catch(() => {})
 
     window.api
-      .invoke('check-microphone-permission', false)
+      ?.invoke('check-microphone-permission', false)
       .then((enabled: boolean) => {
         setMicrophoneEnabled(enabled)
       })
+      .catch(() => {})
   }, [setAccessibilityEnabled, setMicrophoneEnabled])
 
   useEffect(() => {
@@ -63,15 +65,19 @@ export default function WelcomeKit() {
     }
   }
 
-  if (onboardingStep === 0) {
-    return null
-  }
-
   const CurrentComponent = onboardingStepOrder[onboardingStep]
+
+  if (!CurrentComponent) {
+    return (
+      <div className="w-full h-full bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-foreground"></div>
+      </div>
+    )
+  }
 
   return (
     <div className="w-full h-full bg-background">
-      {CurrentComponent ? <CurrentComponent /> : null}
+      <CurrentComponent />
     </div>
   )
 }

@@ -22,7 +22,7 @@ interface MainStore {
 
 // Initialize from electron store
 const getInitialState = () => {
-  const storedMain = window.electron.store.get(STORE_KEYS.MAIN)
+  const storedMain = window.electron?.store?.get(STORE_KEYS.MAIN)
 
   return {
     navExpanded: storedMain?.navExpanded ?? true,
@@ -33,7 +33,7 @@ const getInitialState = () => {
 
 // Sync to electron store
 const syncToStore = (state: Partial<MainStore>) => {
-  const currentStore = window.electron.store.get(STORE_KEYS.MAIN) || {}
+  const currentStore = window.electron?.store?.get(STORE_KEYS.MAIN) || {}
   const updates: any = { ...currentStore }
 
   if ('navExpanded' in state) {
@@ -44,7 +44,7 @@ const syncToStore = (state: Partial<MainStore>) => {
     updates.settingsPage = state.settingsPage ?? currentStore.settingsPage
   }
 
-  window.electron.store.set(STORE_KEYS.MAIN, updates)
+  window.electron?.store?.set(STORE_KEYS.MAIN, updates)
 }
 
 export const useMainStore = create<MainStore>(set => {

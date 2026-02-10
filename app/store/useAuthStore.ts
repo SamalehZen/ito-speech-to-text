@@ -57,7 +57,7 @@ const syncToStore = (state: {
 }) => {
   if (!window.electron?.store) return
 
-  const currentStore = window.electron.store.get(STORE_KEYS.AUTH) || {}
+  const currentStore = window.electron?.store?.get(STORE_KEYS.AUTH) || {}
   const updates: any = { ...currentStore }
 
   if ('user' in state) {
@@ -76,7 +76,7 @@ const syncToStore = (state: {
     updates.isSelfHosted = state.isSelfHosted
   }
 
-  window.electron.store.set(STORE_KEYS.AUTH, updates)
+  window.electron?.store?.set(STORE_KEYS.AUTH, updates)
 }
 
 export const useAuthStore = create<AuthZustandStore>((set, get) => {
