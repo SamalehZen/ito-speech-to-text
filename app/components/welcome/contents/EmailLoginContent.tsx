@@ -33,7 +33,7 @@ export default function EmailLoginContent({
     try {
       setIsLoggingIn(true)
       setErrorMessage(null)
-      await loginWithEmailPassword(email, password, { skipNavigate: true })
+      await loginWithEmailPassword(email, password)
     } catch (e: any) {
       const msg = typeof e?.message === 'string' ? e.message : 'Login failed.'
       console.error('Login error:', e)

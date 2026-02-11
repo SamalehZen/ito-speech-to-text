@@ -113,7 +113,7 @@ jobs:
           & "$vsPath\Common7\Tools\Launch-VsDevShell.ps1" -Arch amd64
 
           # Build each native module
-          $modules = @("global-key-listener", "audio-recorder", "text-writer", "active-application", "selected-text-reader")
+          $modules = @("global-key-listener", "audio-recorder", "text-writer", "active-application", "selected-text-reader", "browser-url-reader")
 
           foreach ($module in $modules) {
             Write-Host "Building $module with MSVC..."
@@ -127,7 +127,7 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force -Path rust-binaries
 
-          $modules = @("global-key-listener", "audio-recorder", "text-writer", "active-application", "selected-text-reader")
+          $modules = @("global-key-listener", "audio-recorder", "text-writer", "active-application", "selected-text-reader", "browser-url-reader")
 
           foreach ($module in $modules) {
             $sourcePath = "native\target\x86_64-pc-windows-msvc\release\$module.exe"
@@ -166,7 +166,7 @@ jobs:
       - name: Place Rust binaries in expected locations
         run: |
           # Place binaries where electron-builder expects them
-          for module in global-key-listener audio-recorder text-writer active-application selected-text-reader; do
+          for module in global-key-listener audio-recorder text-writer active-application selected-text-reader browser-url-reader; do
             mkdir -p "native/target/x86_64-pc-windows-msvc/release"
             cp "rust-binaries-msvc/$module.exe" "native/target/x86_64-pc-windows-msvc/release/"
             echo "Placed $module.exe"

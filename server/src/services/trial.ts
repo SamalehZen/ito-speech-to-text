@@ -2,9 +2,9 @@ import type { FastifyInstance } from 'fastify'
 import Stripe from 'stripe'
 import { TrialsRepository, SubscriptionsRepository } from '../db/repo.js'
 import {
-  getAuth0ManagementToken,
-  getUserInfoFromAuth0,
-} from '../auth/auth0Helpers.js'
+  getUserInfoFromJwt,
+  SupabaseJwtPayload,
+} from '../auth/supabaseJwt.js'
 
 const TRIAL_DAYS = 14
 const MS_PER_DAY = 24 * 60 * 60 * 1000
@@ -15,10 +15,8 @@ async function getOrCreateStripeCustomer(
   email?: string,
   name?: string,
 ): Promise<string> {
-  // Check if user already has a subscription with a customer ID
   const existingSub = await SubscriptionsRepository.getByUserId(userSub)
   if (existingSub?.stripe_customer_id) {
-    // Update existing customer with name/email if provided
     if (name || email) {
       await stripe.customers.update(existingSub.stripe_customer_id, {
         email: email,
@@ -29,7 +27,6 @@ async function getOrCreateStripeCustomer(
     return existingSub.stripe_customer_id
   }
 
-  // Search for existing customer by metadata
   const existingCustomers = await stripe.customers.search({
     query: `metadata['user_sub']:'${userSub}'`,
     limit: 1,
@@ -37,7 +34,6 @@ async function getOrCreateStripeCustomer(
 
   if (existingCustomers.data.length > 0) {
     const customerId = existingCustomers.data[0].id
-    // Update existing customer with name/email if provided
     console.log('Updating existing customer with name/email', name, email)
     if (name || email) {
       await stripe.customers.update(customerId, {
@@ -49,7 +45,6 @@ async function getOrCreateStripeCustomer(
     return customerId
   }
 
-  // Create new customer
   const customer = await stripe.customers.create({
     email: email,
     name: name,
@@ -144,7 +139,8 @@ export const registerTrialRoutes = async (
   fastify.post('/trial/start', async (request, reply) => {
     console.log('trial/start', request.body)
     try {
-      const userSub = (requireAuth && (request as any).user?.sub) || undefined
+      const user = (request as any).user as SupabaseJwtPayload | undefined
+      const userSub = (requireAuth && user?.sub) || undefined
       if (!userSub) {
         reply.code(401).send({ success: false, error: 'Unauthorized' })
         return
@@ -155,16 +151,13 @@ export const registerTrialRoutes = async (
         return
       }
 
-      // Check if user already has a trial subscription
       const existingTrial = await TrialsRepository.getByUserId(userSub)
       if (existingTrial?.stripe_subscription_id) {
-        // Fetch current status from Stripe
         const subscription = await stripe.subscriptions.retrieve(
           existingTrial.stripe_subscription_id,
         )
         const status = computeStatusFromStripe(subscription)
 
-        // Sync status to database
         const trialEndAt = subscription.trial_end
           ? new Date(subscription.trial_end * 1000)
           : null
@@ -180,16 +173,14 @@ export const registerTrialRoutes = async (
         return
       }
 
-      // Check if user already completed trial
       if (existingTrial?.has_completed_trial) {
         reply.send(computeStatus(existingTrial))
         return
       }
 
-      // Get user info from Auth0 Management API (access token only has 'sub')
-      const auth0UserInfo = await getUserInfoFromAuth0(userSub)
-      const userEmail = auth0UserInfo?.email
-      const userName = auth0UserInfo?.name
+      const userInfo = user ? getUserInfoFromJwt(user) : { email: '', name: '' }
+      const userEmail = userInfo.email || undefined
+      const userName = userInfo.name || undefined
 
       const stripeCustomerId = await getOrCreateStripeCustomer(
         stripe,
@@ -198,7 +189,6 @@ export const registerTrialRoutes = async (
         userName,
       )
 
-      // Check if customer already has an active or trialing subscription for this product
       const existingSubscriptions = await stripe.subscriptions.list({
         customer: stripeCustomerId,
         status: 'all',
@@ -212,7 +202,6 @@ export const registerTrialRoutes = async (
       )
 
       if (hasActiveTrialSubscription) {
-        // Find the active/trialing subscription and sync it to the database
         const activeSubscription = existingSubscriptions.data.find(
           sub =>
             (sub.status === 'trialing' || sub.status === 'active') &&
@@ -236,7 +225,6 @@ export const registerTrialRoutes = async (
         }
       }
 
-      // Create subscription with trial
       const subscription = await stripe.subscriptions.create({
         customer: stripeCustomerId,
         items: [{ price: STRIPE_PRICE_ID }],
@@ -249,7 +237,6 @@ export const registerTrialRoutes = async (
         metadata: { user_sub: userSub },
       })
 
-      // Store trial in database
       const trialStartAt = subscription.trial_start
         ? new Date(subscription.trial_start * 1000)
         : null

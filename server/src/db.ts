@@ -1,14 +1,23 @@
 import { Pool } from 'pg'
-import dotenv from 'dotenv'
+import 'dotenv/config'
 
-dotenv.config()
+function getConnectionString(): string | undefined {
+  if (process.env.DATABASE_URL) {
+    return process.env.DATABASE_URL
+  }
+  const user = process.env.DB_USER
+  const pass = process.env.DB_PASS
+  const host = process.env.DB_HOST
+  const port = process.env.DB_PORT || '5432'
+  const name = process.env.DB_NAME
+  if (user && pass && host && name) {
+    return `postgresql://${user}:${encodeURIComponent(pass)}@${host}:${port}/${name}`
+  }
+  return undefined
+}
 
 const pool = new Pool({
-  host: process.env.DB_HOST,
-  port: Number(process.env.DB_PORT ?? 5432),
-  user: process.env.DB_USER,
-  password: process.env.DB_PASS,
-  database: process.env.DB_NAME,
+  connectionString: getConnectionString(),
   ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : undefined,
 })
 

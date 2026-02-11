@@ -7,6 +7,12 @@ import { pathToFileURL } from 'url'
 let pillWindow: BrowserWindow | null = null
 // Keep a reference to the main window
 export let mainWindow: BrowserWindow | null = null
+// Flag to track if the app is really quitting (from tray menu "Quit")
+let isQuitting = false
+
+export function setIsQuitting(value: boolean): void {
+  isQuitting = value
+}
 
 export function getPillWindow(): BrowserWindow | null {
   return pillWindow
@@ -50,7 +56,7 @@ export function createAppWindow(): BrowserWindow {
           ...details.responseHeaders,
           'Content-Security-Policy': [
             "default-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
-              "connect-src 'self' https://*.posthog.com https://app.posthog.com https://eu.posthog.com https://us.i.posthog.com; " +
+              "connect-src 'self' https://*.supabase.co https://*.posthog.com https://app.posthog.com https://eu.posthog.com https://us.i.posthog.com; " +
               "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
               "style-src 'self' 'unsafe-inline'; " +
               "img-src 'self' data: res:; " +
@@ -61,13 +67,22 @@ export function createAppWindow(): BrowserWindow {
     },
   )
 
-  // Clean up the reference when the window is closed.
+  // Intercept the close event to hide the window instead of closing it
+  // This allows the app to stay running in the system tray
+  mainWindow.on('close', (event) => {
+    if (!isQuitting) {
+      event.preventDefault()
+      mainWindow?.hide()
+      // On Windows, also remove from taskbar when hidden
+      if (process.platform === 'win32') {
+        mainWindow?.setSkipTaskbar(true)
+      }
+    }
+  })
+
+  // Clean up the reference when the window is actually closed (during quit)
   mainWindow.on('closed', () => {
     mainWindow = null
-    // On Windows, closing the main window should quit the entire app
-    if (process.platform === 'win32') {
-      app.quit()
-    }
   })
 
   // HMR for renderer base on electron-vite cli.

@@ -25,31 +25,31 @@ interface AdvancedSettingsState {
 
 // Initialize from electron store
 const getInitialState = () => {
-  const storedAdvancedSettings = window.electron.store.get(
+  const storedAdvancedSettings = window.electron?.store?.get(
     STORE_KEYS.ADVANCED_SETTINGS,
-  )
+  ) || {}
 
   return {
-    llm: storedAdvancedSettings.llm,
+    llm: storedAdvancedSettings?.llm,
     grammarServiceEnabled:
-      storedAdvancedSettings.grammarServiceEnabled ?? false,
-    defaults: storedAdvancedSettings.defaults,
+      storedAdvancedSettings?.grammarServiceEnabled ?? false,
+    defaults: storedAdvancedSettings?.defaults,
     macosAccessibilityContextEnabled:
-      storedAdvancedSettings.macosAccessibilityContextEnabled ?? false,
+      storedAdvancedSettings?.macosAccessibilityContextEnabled ?? false,
   }
 }
 
 // Sync to electron store
 const syncToStore = (state: Partial<AdvancedSettingsState>) => {
   const currentAdvancedSettings =
-    window.electron.store.get(STORE_KEYS.ADVANCED_SETTINGS) || {}
+    window.electron?.store?.get(STORE_KEYS.ADVANCED_SETTINGS) || {}
 
   const updatedAdvancedSettings = {
     ...currentAdvancedSettings,
     ...state,
   }
 
-  window.electron.store.set(
+  window.electron?.store?.set(
     STORE_KEYS.ADVANCED_SETTINGS,
     updatedAdvancedSettings,
   )
@@ -64,7 +64,7 @@ export const useAdvancedSettingsStore = create<AdvancedSettingsState>(set => {
     set(latestState)
   }
 
-  window.api.on('advanced-settings-updated', handleStoreUpdate)
+  window.api?.on('advanced-settings-updated', handleStoreUpdate)
 
   return {
     ...initialState,

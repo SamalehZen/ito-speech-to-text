@@ -1,6 +1,23 @@
 import { describe, test, expect, beforeEach, mock } from 'bun:test'
 import { EventEmitter } from 'events'
 
+// Mock electron FIRST before any other imports that might use it
+mock.module('electron', () => ({
+  app: {
+    isPackaged: false,
+    getPath: (type: string) =>
+      type === 'userData' ? '/tmp/test-ito-app' : '/tmp',
+  },
+}))
+
+mock.module('electron-log', () => ({
+  default: {
+    info: mock(),
+    warn: mock(),
+    error: mock(),
+  },
+}))
+
 // Mock all external dependencies
 const mockSpawn = mock(() => mockChildProcess)
 const mockChildProcess = {
@@ -36,14 +53,6 @@ mock.module('path', () => ({
   join: mock((...paths: string[]) => paths.join('/')),
 }))
 
-mock.module('electron', () => ({
-  app: {
-    isPackaged: false,
-    getPath: (type: string) =>
-      type === 'userData' ? '/tmp/test-ito-app' : '/tmp',
-  },
-}))
-
 mock.module('os', () => ({
   default: {
     platform: mock(() => 'darwin'),
@@ -51,14 +60,25 @@ mock.module('os', () => ({
   },
 }))
 
+mock.module('./native-interface', () => ({
+  getNativeBinaryPath: mock(() => '/mock/path/to/audio-recorder'),
+}))
+
 // Helper function to wait for async operations
 const waitForProcessing = () => new Promise(resolve => setTimeout(resolve, 10))
 
-// Import after mocking
-import { audioRecorderService } from './audio'
+// Helper to get the audio recorder service via dynamic import
+const getAudioRecorderService = async () => {
+  const { audioRecorderService } = await import('./audio')
+  return audioRecorderService
+}
 
 describe('AudioRecorderService', () => {
-  beforeEach(() => {
+  let audioRecorderService: Awaited<ReturnType<typeof getAudioRecorderService>>
+
+  beforeEach(async () => {
+    audioRecorderService = await getAudioRecorderService()
+
     // Reset all mocks
     mockSpawn.mockClear()
     mockSpawn.mockReturnValue(mockChildProcess)

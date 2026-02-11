@@ -78,7 +78,9 @@ const getStepName = (step: number): string => {
 
 // Initialize from electron store
 const getInitialState = () => {
-  const storedOnboarding = window.electron.store.get(STORE_KEYS.ONBOARDING)
+  const storedOnboarding = window.electron?.store?.get(STORE_KEYS.ONBOARDING)
+
+  console.log('[DEBUG][OnboardingStore] Initial state from electron-store:', storedOnboarding)
 
   return {
     onboardingStep: storedOnboarding?.onboardingStep ?? 0,
@@ -89,15 +91,15 @@ const getInitialState = () => {
 // Sync to electron store
 const syncToStore = (state: Partial<OnboardingState>) => {
   if ('onboardingStep' in state || 'onboardingCompleted' in state) {
-    const currentStore = window.electron.store.get(STORE_KEYS.ONBOARDING) || {}
-    window.electron.store.set(STORE_KEYS.ONBOARDING, {
+    const currentStore = window.electron?.store?.get(STORE_KEYS.ONBOARDING) || {}
+    window.electron?.store?.set(STORE_KEYS.ONBOARDING, {
       ...currentStore,
       onboardingStep: state.onboardingStep ?? currentStore.onboardingStep,
       onboardingCompleted:
         state.onboardingCompleted ?? currentStore.onboardingCompleted,
     })
 
-    window.api.notifyOnboardingUpdate(state)
+    window.api?.notifyOnboardingUpdate(state)
   }
 }
 

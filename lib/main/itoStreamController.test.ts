@@ -1,6 +1,30 @@
 import { describe, test, expect, beforeEach, mock } from 'bun:test'
 import { ItoMode } from '@/app/generated/ito_pb'
 
+// Mock electron before any imports that might use it
+mock.module('electron', () => ({
+  app: {
+    isPackaged: false,
+    getPath: () => '/tmp/test',
+    getVersion: () => '1.0.0',
+  },
+  BrowserWindow: {
+    getAllWindows: () => [],
+  },
+  ipcMain: {
+    handle: mock(),
+    on: mock(),
+  },
+}))
+
+mock.module('electron-log', () => ({
+  default: {
+    info: mock(),
+    warn: mock(),
+    error: mock(),
+  },
+}))
+
 const mockGrpcClient = {
   transcribeStreamV2: mock(() =>
     Promise.resolve({ transcript: 'default' } as any),
@@ -8,6 +32,25 @@ const mockGrpcClient = {
 }
 mock.module('../clients/grpcClient', () => ({
   grpcClient: mockGrpcClient,
+}))
+
+mock.module('./timing/TimingCollector', () => ({
+  timingCollector: {
+    timeAsync: mock(async (_name: string, fn: () => Promise<any>) => fn()),
+    startTiming: mock(),
+    endTiming: mock(),
+  },
+  TimingEventName: {
+    SERVER_DICTATION: 'server_transcribe',
+    SERVER_EDITING: 'server_editing',
+  },
+}))
+
+mock.module('./interactions/InteractionManager', () => ({
+  interactionManager: {
+    getCurrentInteractionId: mock(() => 'test-interaction-id'),
+    initialize: mock(() => 'test-interaction-id'),
+  },
 }))
 
 const mockAudioStreamManager = {
@@ -50,6 +93,9 @@ const mockContextGrabber = {
       appName: 'Test App',
       contextText: 'Test context',
       vocabularyWords: ['test', 'word'],
+      browserUrl: null,
+      browserDomain: null,
+      tone: null,
       advancedSettings: {
         llm: {
           asrModel: 'whisper-1',
@@ -70,14 +116,6 @@ const mockContextGrabber = {
 }
 mock.module('./context/ContextGrabber', () => ({
   contextGrabber: mockContextGrabber,
-}))
-
-mock.module('electron-log', () => ({
-  default: {
-    info: mock(),
-    warn: mock(),
-    error: mock(),
-  },
 }))
 
 beforeEach(() => {

@@ -112,6 +112,9 @@ export class TranscribeStreamV2Handler {
         windowTitle: mergedConfig.context?.windowTitle || '',
         appName: mergedConfig.context?.appName || '',
         contextText: mergedConfig.context?.contextText || '',
+        browserUrl: mergedConfig.context?.browserUrl || '',
+        browserDomain: mergedConfig.context?.browserDomain || '',
+        tonePrompt: mergedConfig.context?.tonePrompt || '',
       }
 
       const mode = mergedConfig.context?.mode ?? detectItoMode(transcript)
@@ -382,11 +385,17 @@ export class TranscribeStreamV2Handler {
       `[${new Date().toISOString()}] Detected mode: ${mode}, adjusting transcript`,
     )
 
-    if (mode !== ItoMode.EDIT) {
+    const hasTonePrompt = windowContext.tonePrompt && windowContext.tonePrompt.trim() !== ''
+    
+    if (mode !== ItoMode.EDIT && !hasTonePrompt) {
       return transcript
     }
 
-    const userPromptPrefix = getPromptForMode(mode, advancedSettings)
+    const userPromptPrefix = getPromptForMode(
+      mode,
+      advancedSettings,
+      windowContext.tonePrompt,
+    )
     const userPrompt = createUserPromptWithContext(transcript, windowContext)
     const llmProvider = getLlmProvider(advancedSettings.llmProvider)
 
@@ -430,6 +439,18 @@ export class TranscribeStreamV2Handler {
           updateCtx.contextText !== ''
             ? updateCtx.contextText
             : baseCtx.contextText,
+        browserUrl:
+          updateCtx.browserUrl !== ''
+            ? updateCtx.browserUrl
+            : baseCtx.browserUrl,
+        browserDomain:
+          updateCtx.browserDomain !== ''
+            ? updateCtx.browserDomain
+            : baseCtx.browserDomain,
+        tonePrompt:
+          updateCtx.tonePrompt !== ''
+            ? updateCtx.tonePrompt
+            : baseCtx.tonePrompt,
       }
     }
 

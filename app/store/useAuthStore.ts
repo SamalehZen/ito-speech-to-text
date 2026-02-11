@@ -34,7 +34,11 @@ const getInitialState = () => {
     | (AuthStore & { isSelfHosted?: boolean })
     | undefined
 
-  // Generate new auth state if no stored auth stat
+  console.log('[DEBUG][AuthStore] Initial state from electron-store:', {
+    hasTokens: !!storedAuth?.tokens?.access_token,
+    isSelfHosted: !!storedAuth?.isSelfHosted,
+    userId: storedAuth?.user?.id,
+  })
 
   return {
     isAuthenticated:
@@ -57,7 +61,7 @@ const syncToStore = (state: {
 }) => {
   if (!window.electron?.store) return
 
-  const currentStore = window.electron.store.get(STORE_KEYS.AUTH) || {}
+  const currentStore = window.electron?.store?.get(STORE_KEYS.AUTH) || {}
   const updates: any = { ...currentStore }
 
   if ('user' in state) {
@@ -76,7 +80,7 @@ const syncToStore = (state: {
     updates.isSelfHosted = state.isSelfHosted
   }
 
-  window.electron.store.set(STORE_KEYS.AUTH, updates)
+  window.electron?.store?.set(STORE_KEYS.AUTH, updates)
 }
 
 export const useAuthStore = create<AuthZustandStore>((set, get) => {

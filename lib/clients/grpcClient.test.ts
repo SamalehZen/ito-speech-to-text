@@ -91,10 +91,6 @@ mock.module('../auth/events', () => ({
   shouldRefreshToken: mock(() => false),
 }))
 
-mock.module('../auth/config', () => ({
-  Auth0Config: { domain: 'test.auth0.com' },
-}))
-
 mock.module('../media/selected-text-reader', () => ({
   getSelectedTextString: mock(() => Promise.resolve('Selected text')),
 }))

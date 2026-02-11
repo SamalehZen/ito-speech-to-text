@@ -16,8 +16,14 @@ import { useAuthStore } from '@/app/store/useAuthStore'
 import IntroducingIntelligentModeContent from './contents/IntroducingIntelligentModeContent'
 
 export default function WelcomeKit() {
-  const { onboardingStep } = useOnboardingStore()
+  const { onboardingStep, incrementOnboardingStep } = useOnboardingStore()
   const { isAuthenticated, user } = useAuthStore()
+
+  console.log('[DEBUG][WelcomeKit] State:', {
+    isAuthenticated,
+    user: user?.id,
+    onboardingStep,
+  })
 
   const onboardingStepOrder = [
     CreateAccountContent,
@@ -37,34 +43,57 @@ export default function WelcomeKit() {
 
   useEffect(() => {
     window.api
-      .invoke('check-accessibility-permission', false)
+      ?.invoke('check-accessibility-permission', false)
       .then((enabled: boolean) => {
         setAccessibilityEnabled(enabled)
       })
+      .catch(() => {})
 
     window.api
-      .invoke('check-microphone-permission', false)
+      ?.invoke('check-microphone-permission', false)
       .then((enabled: boolean) => {
         setMicrophoneEnabled(enabled)
       })
+      .catch(() => {})
   }, [setAccessibilityEnabled, setMicrophoneEnabled])
 
-  // Show signin/signup based on whether user has previous auth data
+  useEffect(() => {
+    if (isAuthenticated && onboardingStep === 0) {
+      incrementOnboardingStep()
+    }
+  }, [isAuthenticated, onboardingStep, incrementOnboardingStep])
+
   if (!isAuthenticated) {
     if (user) {
-      // Returning user who needs to sign back in
+      console.log('[DEBUG][WelcomeKit] Rendering: SignInContent (user exists but not authenticated)')
       return <SignInContent />
     } else {
-      // New user who needs to create an account
+      console.log('[DEBUG][WelcomeKit] Rendering: CreateAccountContent (no user)')
       return <CreateAccountContent />
     }
   }
 
   const CurrentComponent = onboardingStepOrder[onboardingStep]
 
+  console.log('[DEBUG][WelcomeKit] CurrentComponent:', {
+    onboardingStep,
+    componentName: CurrentComponent?.name || 'undefined',
+    totalSteps: onboardingStepOrder.length,
+  })
+
+  if (!CurrentComponent) {
+    console.error('[DEBUG][WelcomeKit] ERROR: No component found for step', onboardingStep)
+    return (
+      <div className="w-full h-full bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-foreground"></div>
+      </div>
+    )
+  }
+
+  console.log('[DEBUG][WelcomeKit] Rendering:', CurrentComponent.name)
   return (
     <div className="w-full h-full bg-background">
-      {CurrentComponent ? <CurrentComponent /> : null}
+      <CurrentComponent />
     </div>
   )
 }

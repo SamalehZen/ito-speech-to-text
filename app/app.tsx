@@ -20,6 +20,12 @@ const MainApp = () => {
   const { isAuthenticated } = useAuth()
   useDeviceChangeListener()
 
+  console.log('[DEBUG][MainApp] State:', {
+    isAuthenticated,
+    onboardingCompleted,
+    onboardingStep,
+  })
+
   useEffect(() => {
     verifyStoredMicrophone()
   }, [])
@@ -32,7 +38,8 @@ const MainApp = () => {
 
   // If authenticated and onboarding completed, show main app
   if (isAuthenticated && onboardingCompleted) {
-    window.api.send(
+    console.log('[DEBUG][MainApp] Rendering: HomeKit')
+    window.api?.send(
       'electron-store-set',
       'settings.isShortcutGloballyEnabled',
       shouldEnableShortcutGlobally,
@@ -41,7 +48,8 @@ const MainApp = () => {
   }
 
   // If authenticated but onboarding not completed, continue onboarding
-  window.api.send(
+  console.log('[DEBUG][MainApp] Rendering: WelcomeKit')
+  window.api?.send(
     'electron-store-set',
     'settings.isShortcutGloballyEnabled',
     shouldEnableShortcutGlobally,

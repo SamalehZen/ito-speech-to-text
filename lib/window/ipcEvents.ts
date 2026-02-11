@@ -20,21 +20,22 @@ import {
 } from '../media/keyboard'
 import { getPillWindow, mainWindow } from '../main/app'
 import {
-  generateNewAuthState,
-  exchangeAuthCode,
   handleLogin,
   handleLogout,
   ensureValidTokens,
 } from '../auth/events'
 import { KeyValueStore } from '../main/sqlite/repo'
 import { machineId } from 'node-machine-id'
-import { Auth0Config, Auth0Connections } from '../auth/config'
 import {
   NotesTable,
   DictionaryTable,
   InteractionsTable,
   UserMetadataTable,
 } from '../main/sqlite/repo'
+import { AppTargetTable, ToneTable } from '../main/sqlite/appTargetRepo'
+import { getActiveWindow } from '../media/active-application'
+import { getBrowserUrl } from '../media/browser-url'
+import { normalizeAppTargetId } from '../utils/appTargetUtils'
 import { audioRecorderService } from '../media/audio'
 import { voiceInputService } from '../main/voiceInputService'
 import { itoSessionManager } from '../main/itoSessionManager'
@@ -179,15 +180,16 @@ export function registerIPC() {
   )
 
   // Auth
-  handleIPC('generate-new-auth-state', () => generateNewAuthState())
-  handleIPC('exchange-auth-code', async (_e, { authCode, state, config }) =>
-    exchangeAuthCode(_e, { authCode, state, config }),
-  )
-  handleIPC('logout', () => handleLogout())
+  handleIPC('logout', () => {
+    console.log('[DEBUG][IPC] logout called')
+    handleLogout()
+  })
   handleIPC(
     'notify-login-success',
     async (_e, { profile, idToken, accessToken }) => {
+      console.log('[DEBUG][IPC] notify-login-success called with profile:', profile)
       handleLogin(profile, idToken, accessToken)
+      console.log('[DEBUG][IPC] handleLogin completed, checking getCurrentUserId:', getCurrentUserId())
     },
   )
 
@@ -217,7 +219,7 @@ export function registerIPC() {
   // Token refresh handler
   handleIPC('refresh-tokens', async () => {
     try {
-      const result = await ensureValidTokens(Auth0Config)
+      const result = await ensureValidTokens()
       return result
     } catch (error) {
       console.error('Manual token refresh failed:', error)
@@ -322,115 +324,7 @@ export function registerIPC() {
       shell.openExternal(mailtoUrl)
     }
   })
-  // Auth0 DB signup proxy (avoids CORS issues from custom schemes)
-  handleIPC('auth0-db-signup', async (_e, { email, password, name }) => {
-    try {
-      const url = `https://${Auth0Config.domain}/dbconnections/signup`
-      const payload: any = {
-        client_id: Auth0Config.clientId,
-        email,
-        password,
-        name,
-        connection: Auth0Connections.database,
-      }
-
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-      let data: any
-      try {
-        data = await res.json()
-      } catch {
-        data = undefined
-      }
-      if (!res.ok) {
-        const message =
-          data?.description ||
-          data?.error ||
-          `Auth0 signup failed (${res.status})`
-        return { success: false, error: message, status: res.status }
-      }
-      console.log('[IPC] auth0-db-signup response', res.status, data)
-      return { success: true, data }
-    } catch (error: any) {
-      return { success: false, error: error?.message || 'Network error' }
-    }
-  })
-
-  // Auth0 DB login via Password Realm (Resource Owner Password) grant
-  handleIPC('auth0-db-login', async (_e, { email, password }) => {
-    try {
-      if (!email || !password) {
-        return { success: false, error: 'Missing email or password' }
-      }
-      const url = `https://${Auth0Config.domain}/oauth/token`
-      const payload: any = {
-        grant_type: 'http://auth0.com/oauth/grant-type/password-realm',
-        client_id: Auth0Config.clientId,
-        username: email,
-        password,
-        realm: Auth0Connections.database,
-        scope: Auth0Config.scope,
-      }
-      if (Auth0Config.audience) {
-        payload.audience = Auth0Config.audience
-      }
-
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-      let data: any
-      try {
-        data = await res.json()
-      } catch {
-        data = undefined
-      }
-      if (!res.ok) {
-        const message =
-          data?.error_description ||
-          data?.error ||
-          `Auth0 login failed (${res.status})`
-        return { success: false, error: message, status: res.status }
-      }
-
-      return {
-        success: true,
-        tokens: {
-          id_token: data?.id_token || null,
-          access_token: data?.access_token || null,
-          refresh_token: data?.refresh_token || null,
-          scope: data?.scope || null,
-          expires_in: data?.expires_in || null,
-          token_type: data?.token_type || null,
-        },
-      }
-    } catch (error: any) {
-      return { success: false, error: error?.message || 'Network error' }
-    }
-  })
-
-  // Send verification email via server proxy
-  handleIPC('auth0-send-verification', async (_e, { dbUserId }) => {
-    if (!dbUserId) return { success: false, error: 'Missing user identifier' }
-    return itoHttpClient.post('/auth0/send-verification', {
-      dbUserId,
-      clientId: Auth0Config.clientId,
-    })
-  })
-
-  // Check if email exists for db signup and whether it's verified (via server proxy)
-  handleIPC('auth0-check-email', async (_e, { email }) => {
-    if (!email) return { success: false, error: 'Missing email' }
-    return itoHttpClient.get(
-      `/auth0/users-by-email?email=${encodeURIComponent(email)}`,
-    )
-  })
-
-  // Trial routes proxy
+// Trial routes proxy
   handleIPC('trial:complete', async () => {
     return itoHttpClient.post('/trial/complete')
   })
@@ -540,9 +434,17 @@ export function registerIPC() {
   // Notes
   handleIPC('notes:get-all', () => {
     const user_id = getCurrentUserId()
-    return NotesTable.findAll(user_id)
+    console.log('[DEBUG][IPC] notes:get-all called, user_id:', user_id)
+    const result = NotesTable.findAll(user_id)
+    console.log('[DEBUG][IPC] notes:get-all returning:', result)
+    return result
   })
-  handleIPC('notes:add', async (_e, note) => NotesTable.insert(note))
+  handleIPC('notes:add', async (_e, note) => {
+    console.log('[DEBUG][IPC] notes:add called with:', note)
+    const result = await NotesTable.insert(note)
+    console.log('[DEBUG][IPC] notes:add result:', result)
+    return result
+  })
   handleIPC('notes:update-content', async (_e, { id, content }) =>
     NotesTable.updateContent(id, content),
   )
@@ -551,10 +453,16 @@ export function registerIPC() {
   // Dictionary
   handleIPC('dictionary:get-all', () => {
     const user_id = getCurrentUserId()
-    return DictionaryTable.findAll(user_id)
+    console.log('[DEBUG][IPC] dictionary:get-all called, user_id:', user_id)
+    const result = DictionaryTable.findAll(user_id)
+    console.log('[DEBUG][IPC] dictionary:get-all returning:', result)
+    return result
   })
   handleIPC('dictionary:add', async (_e, item) => {
-    return await DictionaryTable.insert(item)
+    console.log('[DEBUG][IPC] dictionary:add called with:', item)
+    const result = await DictionaryTable.insert(item)
+    console.log('[DEBUG][IPC] dictionary:add result:', result)
+    return result
   })
   handleIPC('dictionary:update', async (_e, { id, word, pronunciation }) => {
     return await DictionaryTable.update(id, word, pronunciation)
@@ -934,4 +842,105 @@ ipcMain.on(IPC_EVENTS.ONBOARDING_UPDATE, async (_event, onboarding: any) => {
 // Forwards user authentication updates from the main window to the pill window
 ipcMain.on(IPC_EVENTS.USER_AUTH_UPDATE, (_event, authUser: any) => {
   getPillWindow()?.webContents.send(IPC_EVENTS.USER_AUTH_UPDATE, authUser)
+})
+
+const DEFAULT_LOCAL_USER_ID = 'local-user'
+
+// App Targets
+ipcMain.handle('app-targets:list', async () => {
+  const userId = getCurrentUserId() || DEFAULT_LOCAL_USER_ID
+  return AppTargetTable.findAll(userId)
+})
+
+ipcMain.handle(
+  'app-targets:upsert',
+  async (
+    _event,
+    data: {
+      id: string
+      name: string
+      matchType?: MatchType
+      domain?: string | null
+      toneId?: string | null
+      iconBase64?: string | null
+    }
+  ) => {
+    const userId = getCurrentUserId() || DEFAULT_LOCAL_USER_ID
+    return AppTargetTable.upsert({ ...data, userId })
+  }
+)
+
+ipcMain.handle(
+  'app-targets:update-tone',
+  async (_event, id: string, toneId: string | null) => {
+    const userId = getCurrentUserId() || DEFAULT_LOCAL_USER_ID
+    return AppTargetTable.updateTone(id, userId, toneId)
+  }
+)
+
+ipcMain.handle('app-targets:delete', async (_event, id: string) => {
+  const userId = getCurrentUserId() || DEFAULT_LOCAL_USER_ID
+  return AppTargetTable.delete(id, userId)
+})
+
+ipcMain.handle('app-targets:detect-current', async () => {
+  const isMac = process.platform === 'darwin'
+
+  if (isMac) {
+    app.hide()
+  } else if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.minimize()
+  }
+
+  await new Promise(resolve => setTimeout(resolve, 2500))
+
+  const window = await getActiveWindow()
+  const browserInfo = await getBrowserUrl(window)
+
+  if (isMac) {
+    app.show()
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.focus()
+    }
+  } else if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.restore()
+    mainWindow.show()
+    mainWindow.focus()
+  }
+
+  if (!window) return null
+
+  const appName = window.appName
+  const lowerName = appName.toLowerCase()
+  const blockedApps = ['electron', 'ito', 'explorer', 'finder', 'desktop', 'shell']
+  if (blockedApps.some(blocked => lowerName.includes(blocked))) {
+    return null
+  }
+
+  return {
+    appName,
+    browserUrl: browserInfo.url,
+    browserDomain: browserInfo.domain,
+    suggestedMatchType: browserInfo.domain ? 'domain' : 'app',
+  }
+})
+
+ipcMain.handle('app-targets:get-current', async () => {
+  const userId = getCurrentUserId() || DEFAULT_LOCAL_USER_ID
+
+  const window = await getActiveWindow()
+  if (!window) return null
+
+  const id = normalizeAppTargetId(window.appName)
+  return AppTargetTable.findById(id, userId)
+})
+
+// Tones
+ipcMain.handle('tones:list', async () => {
+  const userId = getCurrentUserId() || DEFAULT_LOCAL_USER_ID
+  return ToneTable.findAll(userId)
+})
+
+ipcMain.handle('tones:get', async (_event, id: string) => {
+  return ToneTable.findById(id)
 })

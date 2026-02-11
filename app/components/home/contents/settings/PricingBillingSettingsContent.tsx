@@ -6,6 +6,7 @@ import useBillingState from '@/app/hooks/useBillingState'
 type BillingPeriod = 'monthly' | 'annual'
 
 export default function PricingBillingSettingsContent() {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('annual')
   const billingState = useBillingState()
   const [checkoutLoading, setCheckoutLoading] = useState(false)

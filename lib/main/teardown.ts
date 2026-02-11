@@ -23,6 +23,7 @@ const WIN_HELPERS = [
   'text-writer.exe',
   'active-application.exe',
   'selected-text-reader.exe',
+  'browser-url-reader.exe',
   'electron-crashpad-handler.exe',
 ]
 
@@ -32,6 +33,7 @@ const MAC_HELPERS = [
   'text-writer',
   'active-application',
   'selected-text-reader',
+  'browser-url-reader',
   'electron-crashpad-handler',
   // Electron’s helpers (your app name may differ)
   'Ito Helper',

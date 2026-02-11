@@ -167,12 +167,15 @@ const deleteUserData = async (userId: string) => {
     const { InteractionsTable, NotesTable, DictionaryTable } = await import(
       './repo'
     )
+    const { AppTargetTable, ToneTable } = await import('./appTargetRepo')
 
     // Delete all user data from all tables
     await Promise.all([
       InteractionsTable.deleteAllUserData(userId),
       NotesTable.deleteAllUserData(userId),
       DictionaryTable.deleteAllUserData(userId),
+      AppTargetTable.deleteAllUserData(userId),
+      ToneTable.deleteAllUserData(userId),
     ])
 
     console.info(`Successfully deleted all data for user: ${userId}`)

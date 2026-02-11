@@ -5,6 +5,7 @@ const nativeBinaries = [
   'text-writer',
   'active-application',
   'selected-text-reader',
+  'browser-url-reader',
 ]
 
 const getMacResources = () =>

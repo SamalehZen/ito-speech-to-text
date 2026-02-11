@@ -1,5 +1,4 @@
 import { create } from 'zustand'
-import log from 'electron-log'
 
 interface AudioState {
   isRecording: boolean

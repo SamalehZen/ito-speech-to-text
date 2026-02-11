@@ -2,8 +2,9 @@ import { FastifyInstance } from 'fastify'
 import Stripe from 'stripe'
 import { SubscriptionsRepository, TrialsRepository } from '../db/repo.js'
 import {
-  getUserInfoFromAuth0,
-} from '../auth/auth0Helpers.js'
+  getUserInfoFromJwt,
+  SupabaseJwtPayload,
+} from '../auth/supabaseJwt.js'
 
 type Options = {
   requireAuth: boolean
@@ -46,15 +47,15 @@ export const registerBillingRoutes = async (
         return
       }
 
-      const userSub = (requireAuth && (request as any).user?.sub) || undefined
+      const user = (request as any).user as SupabaseJwtPayload | undefined
+      const userSub = (requireAuth && user?.sub) || undefined
       if (!userSub) {
         reply.code(401).send({ success: false, error: 'Unauthorized' })
         return
       }
 
-      // Get user info from Auth0 Management API (access token only has 'sub')
-      const auth0UserInfo = await getUserInfoFromAuth0(userSub)
-      const userEmail = auth0UserInfo?.email
+      const userInfo = user ? getUserInfoFromJwt(user) : { email: '', name: '' }
+      const userEmail = userInfo.email || undefined
 
       const session = await stripe.checkout.sessions.create({
         mode: 'subscription',
@@ -90,7 +91,8 @@ export const registerBillingRoutes = async (
         return
       }
 
-      const userSub = (requireAuth && (request as any).user?.sub) || undefined
+      const user = (request as any).user as SupabaseJwtPayload | undefined
+      const userSub = (requireAuth && user?.sub) || undefined
       if (!userSub) {
         reply.code(401).send({ success: false, error: 'Unauthorized' })
         return
@@ -109,7 +111,6 @@ export const registerBillingRoutes = async (
         return
       }
 
-      // Accept both fully completed and paid statuses
       const isCompleted = session.status === 'complete'
       const isPaid = session.payment_status === 'paid'
       if (!isCompleted && !isPaid) {
@@ -128,19 +129,16 @@ export const registerBillingRoutes = async (
       const stripeCustomerId = session.customer
       const stripeSubscriptionId = session.subscription
 
-      // Update customer with name from Auth0 (access token only has 'sub')
-      const auth0UserInfo = await getUserInfoFromAuth0(userSub)
-      if (auth0UserInfo?.name && stripeCustomerId) {
+      const userInfo = user ? getUserInfoFromJwt(user) : { email: '', name: '' }
+      if (userInfo.name && stripeCustomerId) {
         await stripe.customers.update(stripeCustomerId, {
-          name: auth0UserInfo.name,
+          name: userInfo.name,
           metadata: { user_sub: userSub },
         })
       }
 
-      // Check if subscription already exists (idempotency check)
       const existingSub = await SubscriptionsRepository.getByUserId(userSub)
       if (existingSub?.stripe_subscription_id === stripeSubscriptionId) {
-        // Already processed - return existing data
         reply.send({
           success: true,
           pro_status: 'active_pro',
@@ -165,10 +163,9 @@ export const registerBillingRoutes = async (
         stripeCustomerId,
         stripeSubscriptionId,
         subscriptionStartAt,
-        null, // Clear subscription_end_at when reactivating
+        null,
       )
 
-      // End trial if applicable (idempotent - safe to call multiple times)
       await TrialsRepository.completeTrial(userSub)
 
       reply.send({
@@ -197,16 +194,13 @@ export const registerBillingRoutes = async (
         return
       }
 
-      // Check for paid subscription first
       const sub = await SubscriptionsRepository.getByUserId(userSub)
       if (sub && sub.stripe_subscription_id) {
-        // Schedule cancellation at period end instead of immediate cancellation
         const updatedSubscription = await stripe.subscriptions.update(
           sub.stripe_subscription_id,
           { cancel_at_period_end: true },
         )
 
-        // When cancel_at_period_end is true, cancel_at contains the period end date
         const periodEnd = updatedSubscription.cancel_at
           ? new Date(updatedSubscription.cancel_at * 1000)
           : null
@@ -220,22 +214,18 @@ export const registerBillingRoutes = async (
         return
       }
 
-      // Check for active trial
       const trial = await TrialsRepository.getByUserId(userSub)
       if (trial && !trial.has_completed_trial) {
-        // Cancel the Stripe trial subscription if it exists
         if (trial.stripe_subscription_id) {
           await stripe.subscriptions.cancel(trial.stripe_subscription_id)
         }
 
-        // Mark trial as completed
         await TrialsRepository.completeTrial(userSub)
 
         reply.send({ success: true })
         return
       }
 
-      // No active subscription or trial found
       reply
         .code(400)
         .send({ success: false, error: 'No active subscription found' })
@@ -276,7 +266,6 @@ export const registerBillingRoutes = async (
       const sub = await SubscriptionsRepository.getByUserId(userSub)
       const trial = await TrialsRepository.getByUserId(userSub)
 
-      // Calculate trial days from database (synced from Stripe via webhooks)
       const trialStartAt = trial?.trial_start_at
       const trialEndAt = trial?.trial_end_at
       const trialDays =
@@ -285,9 +274,8 @@ export const registerBillingRoutes = async (
               (trialEndAt.getTime() - trialStartAt.getTime()) /
                 (24 * 60 * 60 * 1000),
             )
-          : 14 // Fallback to 14 if dates not available
+          : 14
 
-      // If user has an active paid subscription, return that
       if (sub) {
         const trialBlock = {
           trialDays,
@@ -314,7 +302,6 @@ export const registerBillingRoutes = async (
         return
       }
 
-      // Calculate trial status from database (synced from Stripe via webhooks)
       const now = Date.now()
       const isTrialActive =
         !!trialEndAt &&
@@ -392,9 +379,8 @@ export const registerBillingRoutes = async (
   })
 }
 
-// Public routes that must be accessible without authentication
 export const registerBillingPublicRoutes = async (fastify: FastifyInstance) => {
-  const APP_PROTOCOL = getEnv('APP_PROTOCOL') // e.g., ito-dev or ito
+  const APP_PROTOCOL = getEnv('APP_PROTOCOL')
 
   fastify.get('/billing/success', async (request, reply) => {
     const { session_id } = request.query as { session_id?: string }

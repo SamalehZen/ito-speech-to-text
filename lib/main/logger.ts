@@ -8,8 +8,11 @@ import { interactionManager } from './interactions/InteractionManager'
 const LOG_QUEUE_KEY = 'log_queue:events'
 
 export function initializeLogging() {
-  // Overriding console methods with electron-log
-  Object.assign(console, log.functions)
+  // Save original console methods BEFORE any overrides
+  const _originalLog = console.log
+  const _originalInfo = console.info
+  const _originalWarn = console.warn
+  const _originalError = console.error
 
   // Configure file transport for the packaged app
   if (app.isPackaged) {
@@ -130,10 +133,10 @@ export function initializeLogging() {
   }
 
   // Wrap core log methods to enqueue events
-  const originalInfo = console.info
-  const originalWarn = console.warn
-  const originalError = console.error
-  const originalLog = console.log
+  const originalInfo = _originalInfo
+  const originalWarn = _originalWarn
+  const originalError = _originalError
+  const originalLog = _originalLog
 
   console.log = (...args: any[]) => {
     try {

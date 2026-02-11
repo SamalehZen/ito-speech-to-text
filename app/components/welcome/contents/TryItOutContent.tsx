@@ -12,6 +12,7 @@ import React from 'react'
 import { ItoMode } from '@/app/generated/ito_pb'
 import { getKeyDisplay } from '@/app/utils/keyboard'
 import { usePlatform } from '@/app/hooks/usePlatform'
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { KeyName } from '@/lib/types/keyboard'
 
 export default function TryItOut() {

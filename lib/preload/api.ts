@@ -132,6 +132,26 @@ const api = {
 
     delete: (id: string) => ipcRenderer.invoke('interactions:delete', id),
   },
+  appTargets: {
+    list: () => ipcRenderer.invoke('app-targets:list'),
+    upsert: (data: {
+      id: string
+      name: string
+      matchType?: 'app' | 'domain'
+      domain?: string | null
+      toneId?: string | null
+      iconBase64?: string | null
+    }) => ipcRenderer.invoke('app-targets:upsert', data),
+    updateTone: (id: string, toneId: string | null) =>
+      ipcRenderer.invoke('app-targets:update-tone', id, toneId),
+    delete: (id: string) => ipcRenderer.invoke('app-targets:delete', id),
+    detectCurrent: () => ipcRenderer.invoke('app-targets:detect-current'),
+    getCurrent: () => ipcRenderer.invoke('app-targets:get-current'),
+  },
+  tones: {
+    list: () => ipcRenderer.invoke('tones:list'),
+    get: (id: string) => ipcRenderer.invoke('tones:get', id),
+  },
   trial: {
     complete: () => ipcRenderer.invoke('trial:complete'),
     startAfterOnboarding: () =>

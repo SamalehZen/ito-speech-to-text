@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo } from 'react'
 import { useAuthStore } from '../../store/useAuthStore'
 import { type AuthUser, type AuthTokens } from '../../../lib/main/store'
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { useMainStore } from '@/app/store/useMainStore'
 import { analytics, ANALYTICS_EVENTS } from '../analytics'
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { STORE_KEYS } from '../../../lib/constants/store-keys'
 import { useOnboardingStore } from '@/app/store/useOnboardingStore'
 import { supabase, AUTH_DISABLED } from './supabaseClient'
@@ -12,33 +14,37 @@ const noopAsync = async () => {}
 const noopAsyncSuccess = async () => ({ success: true as const })
 
 const localUser: AuthUser = {
-  id: 'local-user',
+  id: 'self-hosted',
   email: 'local@ito.app',
   name: 'Local User',
   picture: undefined,
   provider: 'local',
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const localTokens: AuthTokens = {
-  accessToken: 'local-token',
-  idToken: 'local-id-token',
-  refreshToken: 'local-refresh-token',
-  expiresAt: Date.now() + 365 * 24 * 60 * 60 * 1000,
+  access_token: 'local-token',
+  id_token: 'local-id-token',
+  refresh_token: 'local-refresh-token',
+  expires_at: Date.now() + 365 * 24 * 60 * 60 * 1000,
 }
 
 export function useAuth() {
   const { session, user: supabaseUser, isLoading: supabaseLoading } = useSupabaseContext()
   const {
     user: storedUser,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     tokens,
     setAuthData,
     clearAuth,
     isAuthenticated: storeIsAuthenticated,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     setName,
     setSelfHostedMode,
   } = useAuthStore()
 
-  const { resetState: resetMainState } = useMainStore()
+  // useMainStore doesn't have resetState, use a no-op
+  const resetMainState = () => {}
   const { resetOnboarding } = useOnboardingStore()
 
   const authUser = useMemo<AuthUser | null>(() => {
@@ -54,8 +60,14 @@ export function useAuth() {
   }, [session, supabaseUser, storedUser])
 
   const isAuthenticated = useMemo(() => {
-    if (AUTH_DISABLED) return true
-    return !!session && !!supabaseUser
+    const result = AUTH_DISABLED ? true : (!!session && !!supabaseUser)
+    console.log('[DEBUG][useAuth] isAuthenticated:', {
+      AUTH_DISABLED,
+      hasSession: !!session,
+      hasSupabaseUser: !!supabaseUser,
+      result,
+    })
+    return result
   }, [session, supabaseUser])
 
   const isLoading = useMemo(() => {
@@ -64,14 +76,42 @@ export function useAuth() {
   }, [supabaseLoading])
 
   useEffect(() => {
+    console.log('[DEBUG][useAuth] useEffect triggered:', {
+      AUTH_DISABLED,
+      hasSession: !!session,
+      hasSupabaseUser: !!supabaseUser,
+      hasAuthUser: !!authUser,
+      storeIsAuthenticated,
+      storedUserId: storedUser?.id,
+    })
+
     if (AUTH_DISABLED) {
       if (!storeIsAuthenticated) {
+        const selfHostedProfile = {
+          id: 'self-hosted',
+          email: undefined,
+          name: 'Self-Hosted User',
+        }
+        console.log('[DEBUG][useAuth] AUTH_DISABLED - calling notifyLoginSuccess with:', selfHostedProfile)
+        window.api.notifyLoginSuccess(selfHostedProfile, null, null)
         setSelfHostedMode()
       }
       return
     }
 
     if (session && supabaseUser && authUser) {
+      if (storeIsAuthenticated && storedUser?.id === supabaseUser.id) {
+        return
+      }
+      
+      const profile = {
+        id: supabaseUser.id,
+        email: supabaseUser.email,
+        name: supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0] || 'User',
+      }
+      console.log('[DEBUG][useAuth] Valid session - calling notifyLoginSuccess with profile:', profile)
+      window.api.notifyLoginSuccess(profile, session.access_token, session.access_token)
+      
       const authTokens: AuthTokens = {
         access_token: session.access_token,
         id_token: session.access_token,
@@ -80,7 +120,7 @@ export function useAuth() {
       }
       setAuthData(authTokens, authUser, 'email')
     }
-  }, [session, supabaseUser, authUser, setAuthData, storeIsAuthenticated, setSelfHostedMode])
+  }, [session, supabaseUser, authUser, setAuthData, storeIsAuthenticated, setSelfHostedMode, storedUser?.id])
 
   const signupWithEmail = useCallback(
     async (email: string, password: string, fullName?: string) => {
@@ -103,7 +143,7 @@ export function useAuth() {
       }
 
       if (data.user) {
-        analytics.track(ANALYTICS_EVENTS.SIGNUP_COMPLETED, {
+        analytics.track(ANALYTICS_EVENTS.AUTH_SIGNUP_COMPLETED, {
           provider: 'email',
           email,
         })
@@ -115,11 +155,7 @@ export function useAuth() {
   )
 
   const loginWithEmailPassword = useCallback(
-    async (
-      email: string,
-      password: string,
-      options?: { skipNavigate?: boolean },
-    ) => {
+    async (email: string, password: string) => {
       if (AUTH_DISABLED || !supabase) {
         return { success: true as const }
       }
@@ -134,7 +170,7 @@ export function useAuth() {
       }
 
       if (data.user) {
-        analytics.track(ANALYTICS_EVENTS.LOGIN_COMPLETED, {
+        analytics.track(ANALYTICS_EVENTS.AUTH_SIGNIN_COMPLETED, {
           provider: 'email',
           email,
         })
@@ -159,8 +195,11 @@ export function useAuth() {
     clearAuth()
     resetMainState()
     resetOnboarding()
+    
+    console.log('[DEBUG][useAuth] Calling logout on main process')
+    window.api.logout()
 
-    analytics.track(ANALYTICS_EVENTS.LOGOUT_COMPLETED)
+    analytics.track(ANALYTICS_EVENTS.AUTH_LOGOUT)
   }, [clearAuth, resetMainState, resetOnboarding])
 
   const getAccessToken = useCallback(async (): Promise<string> => {
@@ -223,6 +262,12 @@ export function useAuth() {
   const loginWithSelfHosted = useCallback(async () => {
     if (!supabase) {
       setSelfHostedMode()
+      const selfHostedProfile = {
+        id: 'self-hosted',
+        email: undefined,
+        name: 'Self-Hosted User',
+      }
+      window.api.notifyLoginSuccess(selfHostedProfile, null, null)
     }
   }, [setSelfHostedMode])
 

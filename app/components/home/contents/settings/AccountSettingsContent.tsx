@@ -38,10 +38,10 @@ export default function AccountSettingsContent() {
       await window.api.deleteUserData()
 
       // Clear KV-backed app state
-      window.electron.store.set('settings', {})
-      window.electron.store.set('main', {})
-      window.electron.store.set('onboarding', {})
-      window.electron.store.set('auth', {})
+      window.electron?.store?.set('settings', {})
+      window.electron?.store?.set('main', {})
+      window.electron?.store?.set('onboarding', {})
+      window.electron?.store?.set('auth', {})
 
       // Clear auth state
       clearAuth(false)
@@ -59,10 +59,10 @@ export default function AccountSettingsContent() {
       console.error('Failed to delete account data:', error)
       // Still proceed with local cleanup even if server deletion fails
       // Clear KV-backed app state
-      window.electron.store.set('settings', {})
-      window.electron.store.set('main', {})
-      window.electron.store.set('onboarding', {})
-      window.electron.store.set('auth', {})
+      window.electron?.store?.set('settings', {})
+      window.electron?.store?.set('main', {})
+      window.electron?.store?.set('onboarding', {})
+      window.electron?.store?.set('auth', {})
 
       // Clear auth state
       clearAuth(false)

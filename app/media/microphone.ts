@@ -13,12 +13,11 @@ type MicrophoneToRender = {
 async function getAvailableMicrophones(): Promise<Microphone[]> {
   try {
     console.log('Fetching available native microphones...')
-    // This now gets the list directly from our Rust binary via the main process
+    if (!window.api?.invoke) return []
     const deviceNames: string[] = await window.api.invoke(
       'get-native-audio-devices',
     )
     console.log('Available native microphones:', deviceNames)
-    // The deviceId and label are the same in this new system
     return deviceNames.map(name => ({
       deviceId: name,
       label: name,
@@ -39,7 +38,6 @@ export async function verifyStoredMicrophone() {
     const { microphoneDeviceId, setMicrophoneDeviceId } =
       useSettingsStore.getState()
 
-    // If the user already has "default" selected, there's nothing to verify.
     if (microphoneDeviceId === 'default') {
       console.log(
         '[verifyStoredMicrophone] "Auto-detect" is selected. Verification not needed.',
@@ -47,12 +45,12 @@ export async function verifyStoredMicrophone() {
       return
     }
 
-    // Get the list of currently available microphones from the native backend.
+    if (!window.api?.invoke) return
+
     const availableDevices: string[] = await window.api.invoke(
       'get-native-audio-devices',
     )
 
-    // Check if the stored deviceId is in the list of available devices.
     const isDeviceAvailable = availableDevices.includes(microphoneDeviceId)
 
     if (isDeviceAvailable) {
@@ -63,8 +61,6 @@ export async function verifyStoredMicrophone() {
       console.warn(
         `[verifyStoredMicrophone] Stored microphone "${microphoneDeviceId}" is not available. Falling back to "Auto-detect".`,
       )
-      // The device is disconnected. Update the store to use the default.
-      // We pass the friendly name "Auto-detect" to keep the UI consistent.
       setMicrophoneDeviceId('default', 'Auto-detect')
     }
   } catch (error) {

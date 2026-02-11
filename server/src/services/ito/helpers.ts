@@ -5,10 +5,14 @@ import { DEFAULT_ADVANCED_SETTINGS } from '../../constants/generated-defaults.js
 import { ItoMode } from '../../generated/ito_pb.js'
 import {
   END_APP_NAME_MARKER,
+  END_BROWSER_DOMAIN_MARKER,
+  END_BROWSER_URL_MARKER,
   END_CONTEXT_MARKER,
   END_USER_COMMAND_MARKER,
   END_WINDOW_TITLE_MARKER,
   START_APP_NAME_MARKER,
+  START_BROWSER_DOMAIN_MARKER,
+  START_BROWSER_URL_MARKER,
   START_CONTEXT_MARKER,
   START_USER_COMMAND_MARKER,
   START_WINDOW_TITLE_MARKER,
@@ -25,6 +29,12 @@ export function createUserPromptWithContext(
     }
     if (context.appName) {
       contextPrompt += `\n${START_APP_NAME_MARKER}\n${context.appName}\n${END_APP_NAME_MARKER}`
+    }
+    if (context.browserUrl) {
+      contextPrompt += `\n${START_BROWSER_URL_MARKER}\n${context.browserUrl}\n${END_BROWSER_URL_MARKER}`
+    }
+    if (context.browserDomain) {
+      contextPrompt += `\n${START_BROWSER_DOMAIN_MARKER}\n${context.browserDomain}\n${END_BROWSER_DOMAIN_MARKER}`
     }
   }
   const userPrompt = `
@@ -158,30 +168,44 @@ export function getItoMode(input: unknown): ItoMode | undefined {
   }
 }
 
+const WAKE_PHRASES = [
+  'salut arka',
+  'bonjour arka',
+  'bonsoir arka',
+  'hey arka',
+  'hey ito',
+]
+
 export function detectItoMode(transcript: string): ItoMode {
   const words = transcript.trim().split(/\s+/)
   const firstFiveWords = words.slice(0, 5).join(' ').toLowerCase()
 
-  return firstFiveWords.includes('hey ito') ? ItoMode.EDIT : ItoMode.TRANSCRIBE
+  const isEditMode = WAKE_PHRASES.some(phrase => firstFiveWords.includes(phrase))
+  return isEditMode ? ItoMode.EDIT : ItoMode.TRANSCRIBE
 }
 
 export function getPromptForMode(
   mode: ItoMode,
   advancedSettingsHeaders: ReturnType<typeof getAdvancedSettingsHeaders>,
+  tonePrompt?: string,
 ): string {
+  let basePrompt: string
   switch (mode) {
     case ItoMode.EDIT:
-      return (
-        // TODO: Figure out how to version advanced settings such that we can overwrite user settings when a significant change is made
-        // advancedSettingsHeaders.editingPrompt || ITO_MODE_PROMPT[ItoMode.EDIT]
-        ITO_MODE_PROMPT[ItoMode.EDIT]
-      )
+      basePrompt = ITO_MODE_PROMPT[ItoMode.EDIT]
+      break
     case ItoMode.TRANSCRIBE:
-      return (
+      basePrompt =
         advancedSettingsHeaders.transcriptionPrompt ||
         ITO_MODE_PROMPT[ItoMode.TRANSCRIBE]
-      )
+      break
     default:
-      return ITO_MODE_PROMPT[ItoMode.TRANSCRIBE]
+      basePrompt = ITO_MODE_PROMPT[ItoMode.TRANSCRIBE]
   }
+
+  if (tonePrompt && tonePrompt.trim()) {
+    return `${tonePrompt}\n\n${basePrompt}`
+  }
+
+  return basePrompt
 }

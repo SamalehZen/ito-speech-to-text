@@ -221,6 +221,9 @@ export class ItoStreamController {
             appName: context.appName,
             contextText: context.contextText,
             mode: this.currentMode,
+            browserUrl: context.browserUrl ?? undefined,
+            browserDomain: context.browserDomain ?? undefined,
+            tonePrompt: context.tone?.promptTemplate ?? undefined,
           }),
           llmSettings: create(LlmSettingsSchema, {
             asrModel: context.advancedSettings.llm.asrModel ?? undefined,

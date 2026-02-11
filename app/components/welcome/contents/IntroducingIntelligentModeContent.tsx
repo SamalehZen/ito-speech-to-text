@@ -86,7 +86,6 @@ export default function IntroducingIntelligentMode() {
           editButtonClassName="w-44"
           confirmButtonClassName="hidden"
           className="rounded-xl shadow-lg p-6 flex flex-col items-center min-w-[500px] max-h-[280px]"
-          mode={ItoMode.EDIT}
         />
       </div>
     </div>
