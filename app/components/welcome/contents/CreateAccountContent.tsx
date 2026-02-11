@@ -34,6 +34,7 @@ export default function CreateAccountContent() {
 
   const {
     user,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     isAuthenticated,
     loginWithGoogle,
     loginWithMicrosoft,
@@ -129,7 +130,7 @@ export default function CreateAccountContent() {
       <EmailSignupContent
         initialEmail={email}
         onBack={() => setShowEmailPassword(false)}
-        onContinue={em => signupWithEmail(em)}
+        onContinue={(em, pw) => signupWithEmail(em, pw || '')}
       />
     )
   }

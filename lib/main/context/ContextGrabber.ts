@@ -1,6 +1,6 @@
 import { ItoMode } from '@/app/generated/ito_pb'
 import { DictionaryTable } from '../sqlite/repo'
-import { AppTargetTable, ToneTable, type Tone } from '../sqlite/appTargetRepo'
+import { AppTargetTable, ToneTable, type Tone, type AppTarget } from '../sqlite/appTargetRepo'
 import { getCurrentUserId, getAdvancedSettings } from '../store'
 import { getActiveWindow } from '../../media/active-application'
 import {
@@ -116,7 +116,7 @@ export class ContextGrabber {
 
       console.log('[ContextGrabber] Looking for tone - userId:', userId, '| appName:', appName, '| browserDomain:', browserDomain)
 
-      let appTarget = null
+      let appTarget: AppTarget | null = null
 
       if (browserDomain) {
         appTarget = await AppTargetTable.findByDomain(browserDomain, userId)

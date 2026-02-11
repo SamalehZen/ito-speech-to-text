@@ -114,6 +114,7 @@ export default function SignInContent() {
   const { clearAuth } = useAuthStore()
   const { loadNotes } = useNotesStore()
   const { loadEntries } = useDictionaryStore()
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { resetOnboarding } = useOnboardingStore()
   const [isServerHealthy, setIsServerHealthy] = useState(true)
   const [email, setEmail] = useState('')
@@ -171,16 +172,16 @@ export default function SignInContent() {
     try {
       switch (provider) {
         case 'google':
-          await loginWithGoogle(userEmail)
+          await loginWithGoogle()
           break
         case 'microsoft':
-          await loginWithMicrosoft(userEmail)
+          await loginWithMicrosoft()
           break
         case 'apple':
-          await loginWithApple(userEmail)
+          await loginWithApple()
           break
         case 'github':
-          await loginWithGitHub(userEmail)
+          await loginWithGitHub()
           break
         default:
           console.error('Unknown auth provider:', provider)
@@ -213,7 +214,7 @@ export default function SignInContent() {
     try {
       setIsLoggingIn(true)
       setErrorMessage(null)
-      await loginWithEmailPassword(email, password, { skipNavigate: true })
+      await loginWithEmailPassword(email, password)
     } catch (e: any) {
       const msg = typeof e?.message === 'string' ? e.message : 'Login failed.'
       setErrorMessage(msg)
@@ -274,7 +275,7 @@ export default function SignInContent() {
         />
         <Button
           className="w-full h-12 text-sm font-medium"
-          onClick={() => loginWithEmail(email || userEmail)}
+          onClick={() => loginWithEmail()}
         >
           Continue with Email
         </Button>

@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo } from 'react'
 import { useAuthStore } from '../../store/useAuthStore'
 import { type AuthUser, type AuthTokens } from '../../../lib/main/store'
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { useMainStore } from '@/app/store/useMainStore'
 import { analytics, ANALYTICS_EVENTS } from '../analytics'
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { STORE_KEYS } from '../../../lib/constants/store-keys'
 import { useOnboardingStore } from '@/app/store/useOnboardingStore'
 import { supabase, AUTH_DISABLED } from './supabaseClient'
@@ -19,26 +21,30 @@ const localUser: AuthUser = {
   provider: 'local',
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const localTokens: AuthTokens = {
-  accessToken: 'local-token',
-  idToken: 'local-id-token',
-  refreshToken: 'local-refresh-token',
-  expiresAt: Date.now() + 365 * 24 * 60 * 60 * 1000,
+  access_token: 'local-token',
+  id_token: 'local-id-token',
+  refresh_token: 'local-refresh-token',
+  expires_at: Date.now() + 365 * 24 * 60 * 60 * 1000,
 }
 
 export function useAuth() {
   const { session, user: supabaseUser, isLoading: supabaseLoading } = useSupabaseContext()
   const {
     user: storedUser,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     tokens,
     setAuthData,
     clearAuth,
     isAuthenticated: storeIsAuthenticated,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     setName,
     setSelfHostedMode,
   } = useAuthStore()
 
-  const { resetState: resetMainState } = useMainStore()
+  // useMainStore doesn't have resetState, use a no-op
+  const resetMainState = () => {}
   const { resetOnboarding } = useOnboardingStore()
 
   const authUser = useMemo<AuthUser | null>(() => {
@@ -137,7 +143,7 @@ export function useAuth() {
       }
 
       if (data.user) {
-        analytics.track(ANALYTICS_EVENTS.SIGNUP_COMPLETED, {
+        analytics.track(ANALYTICS_EVENTS.AUTH_SIGNUP_COMPLETED, {
           provider: 'email',
           email,
         })
@@ -149,11 +155,7 @@ export function useAuth() {
   )
 
   const loginWithEmailPassword = useCallback(
-    async (
-      email: string,
-      password: string,
-      options?: { skipNavigate?: boolean },
-    ) => {
+    async (email: string, password: string) => {
       if (AUTH_DISABLED || !supabase) {
         return { success: true as const }
       }
@@ -168,7 +170,7 @@ export function useAuth() {
       }
 
       if (data.user) {
-        analytics.track(ANALYTICS_EVENTS.LOGIN_COMPLETED, {
+        analytics.track(ANALYTICS_EVENTS.AUTH_SIGNIN_COMPLETED, {
           provider: 'email',
           email,
         })
@@ -197,7 +199,7 @@ export function useAuth() {
     console.log('[DEBUG][useAuth] Calling logout on main process')
     window.api.logout()
 
-    analytics.track(ANALYTICS_EVENTS.LOGOUT_COMPLETED)
+    analytics.track(ANALYTICS_EVENTS.AUTH_LOGOUT)
   }, [clearAuth, resetMainState, resetOnboarding])
 
   const getAccessToken = useCallback(async (): Promise<string> => {

@@ -43,7 +43,7 @@ export const SupabaseProvider: React.FC<SupabaseProviderProps> = ({
 
     const initSession = async () => {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession()
+        const { data: { session }, error } = await supabase!.auth.getSession()
         if (error) {
           console.error('Error getting session:', error)
         }
@@ -64,7 +64,7 @@ export const SupabaseProvider: React.FC<SupabaseProviderProps> = ({
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase!.auth.onAuthStateChange((_event, session) => {
       if (mounted) {
         setSession(session)
         setUser(session?.user ?? null)

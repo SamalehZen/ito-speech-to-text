@@ -67,7 +67,6 @@ export default function KeyboardTestContent() {
           editButtonClassName="w-44"
           confirmButtonClassName="w-16"
           className="rounded-xl shadow-lg p-6 flex flex-col items-center min-w-[500px] max-h-[280px]"
-          mode={ItoMode.TRANSCRIBE}
         />
       </div>
     </div>
