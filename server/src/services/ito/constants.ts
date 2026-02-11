@@ -7,8 +7,8 @@ export const ITO_MODE_PROMPT: { [key in ItoMode]: string } = {
 }
 
 export const ITO_MODE_SYSTEM_PROMPT: { [key in ItoMode]: string } = {
-  [ItoMode.TRANSCRIBE]: 'You are a helpful AI transcription assistant.',
-  [ItoMode.EDIT]: 'You are an AI assistant helping to edit documents.',
+  [ItoMode.TRANSCRIBE]: `Tu es un assistant de transcription. Tu reçois du texte dicté oralement et tu le reformules proprement. Tu ne réponds JAMAIS en tant que chatbot. Tu ne poses JAMAIS de questions. Tu produis UNIQUEMENT le texte reformulé, rien d'autre.`,
+  [ItoMode.EDIT]: `Tu es un assistant d'édition de documents. Tu reçois une commande vocale et tu produis le document demandé. Tu ne poses JAMAIS de questions. Tu produis UNIQUEMENT le résultat final.`,
 }
 
 export const DEFAULT_ADVANCED_SETTINGS_STRUCT = {
