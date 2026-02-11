@@ -3,7 +3,7 @@ import { join } from 'path'
 import { audioRecorderService } from '../media/audio'
 import store, { SettingsStore } from './store'
 import { STORE_KEYS } from '../constants/store-keys'
-import { createAppWindow, mainWindow } from './app'
+import { createAppWindow, mainWindow, setIsQuitting } from './app'
 import { voiceInputService } from './voiceInputService'
 
 let tray: Tray | null = null
@@ -85,6 +85,10 @@ async function rebuildTrayMenu(): Promise<void> {
         if (!mainWindow) {
           createAppWindow()
         } else {
+          // Show in taskbar again on Windows
+          if (process.platform === 'win32') {
+            mainWindow.setSkipTaskbar(false)
+          }
           if (!mainWindow.isVisible()) mainWindow.show()
           mainWindow.focus()
         }
@@ -97,7 +101,10 @@ async function rebuildTrayMenu(): Promise<void> {
     { type: 'separator' },
     {
       label: 'Quit Ito',
-      role: 'quit',
+      click: () => {
+        setIsQuitting(true)
+        app.quit()
+      },
     },
   ]
 

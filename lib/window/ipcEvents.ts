@@ -180,11 +180,16 @@ export function registerIPC() {
   )
 
   // Auth
-  handleIPC('logout', () => handleLogout())
+  handleIPC('logout', () => {
+    console.log('[DEBUG][IPC] logout called')
+    handleLogout()
+  })
   handleIPC(
     'notify-login-success',
     async (_e, { profile, idToken, accessToken }) => {
+      console.log('[DEBUG][IPC] notify-login-success called with profile:', profile)
       handleLogin(profile, idToken, accessToken)
+      console.log('[DEBUG][IPC] handleLogin completed, checking getCurrentUserId:', getCurrentUserId())
     },
   )
 
@@ -429,9 +434,17 @@ export function registerIPC() {
   // Notes
   handleIPC('notes:get-all', () => {
     const user_id = getCurrentUserId()
-    return NotesTable.findAll(user_id)
+    console.log('[DEBUG][IPC] notes:get-all called, user_id:', user_id)
+    const result = NotesTable.findAll(user_id)
+    console.log('[DEBUG][IPC] notes:get-all returning:', result)
+    return result
   })
-  handleIPC('notes:add', async (_e, note) => NotesTable.insert(note))
+  handleIPC('notes:add', async (_e, note) => {
+    console.log('[DEBUG][IPC] notes:add called with:', note)
+    const result = await NotesTable.insert(note)
+    console.log('[DEBUG][IPC] notes:add result:', result)
+    return result
+  })
   handleIPC('notes:update-content', async (_e, { id, content }) =>
     NotesTable.updateContent(id, content),
   )
@@ -440,10 +453,16 @@ export function registerIPC() {
   // Dictionary
   handleIPC('dictionary:get-all', () => {
     const user_id = getCurrentUserId()
-    return DictionaryTable.findAll(user_id)
+    console.log('[DEBUG][IPC] dictionary:get-all called, user_id:', user_id)
+    const result = DictionaryTable.findAll(user_id)
+    console.log('[DEBUG][IPC] dictionary:get-all returning:', result)
+    return result
   })
   handleIPC('dictionary:add', async (_e, item) => {
-    return await DictionaryTable.insert(item)
+    console.log('[DEBUG][IPC] dictionary:add called with:', item)
+    const result = await DictionaryTable.insert(item)
+    console.log('[DEBUG][IPC] dictionary:add result:', result)
+    return result
   })
   handleIPC('dictionary:update', async (_e, { id, word, pronunciation }) => {
     return await DictionaryTable.update(id, word, pronunciation)

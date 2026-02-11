@@ -109,7 +109,9 @@ export const handleLogin = (
   idToken: string | null,
   accessToken: string | null,
 ) => {
+  console.log('[DEBUG][auth/events] handleLogin called with profile:', profile)
   store.set(STORE_KEYS.USER_PROFILE, profile)
+  console.log('[DEBUG][auth/events] USER_PROFILE set, verifying:', store.get(STORE_KEYS.USER_PROFILE))
 
   if (idToken) {
     store.set(STORE_KEYS.ID_TOKEN, idToken)
@@ -125,9 +127,11 @@ export const handleLogin = (
 }
 
 export const handleLogout = () => {
+  console.log('[DEBUG][auth/events] handleLogout called')
   store.delete(STORE_KEYS.USER_PROFILE)
   store.delete(STORE_KEYS.ID_TOKEN)
   store.delete(STORE_KEYS.ACCESS_TOKEN)
+  console.log('[DEBUG][auth/events] USER_PROFILE after delete:', store.get(STORE_KEYS.USER_PROFILE))
   grpcClient.setAuthToken(null)
   syncService.stop()
 }

@@ -8,6 +8,7 @@ import {
   mainWindow,
   registerResourcesProtocol,
   startPillPositioner,
+  setIsQuitting,
 } from './app'
 import { initializeLogging } from './logger'
 import { registerIPC } from '../window/ipcEvents'
@@ -147,6 +148,7 @@ app.whenReady().then(async () => {
 
   app.on('before-quit', () => {
     console.log('App is quitting, cleaning up resources...')
+    setIsQuitting(true)
     teardown()
   })
 

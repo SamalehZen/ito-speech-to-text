@@ -168,11 +168,20 @@ export function getItoMode(input: unknown): ItoMode | undefined {
   }
 }
 
+const WAKE_PHRASES = [
+  'salut arka',
+  'bonjour arka',
+  'bonsoir arka',
+  'hey arka',
+  'hey ito',
+]
+
 export function detectItoMode(transcript: string): ItoMode {
   const words = transcript.trim().split(/\s+/)
   const firstFiveWords = words.slice(0, 5).join(' ').toLowerCase()
 
-  return firstFiveWords.includes('hey ito') ? ItoMode.EDIT : ItoMode.TRANSCRIBE
+  const isEditMode = WAKE_PHRASES.some(phrase => firstFiveWords.includes(phrase))
+  return isEditMode ? ItoMode.EDIT : ItoMode.TRANSCRIBE
 }
 
 export function getPromptForMode(

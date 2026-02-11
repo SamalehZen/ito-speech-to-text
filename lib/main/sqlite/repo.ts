@@ -200,6 +200,7 @@ type InsertNote = Omit<Note, 'id' | 'created_at' | 'updated_at' | 'deleted_at'>
 
 export class NotesTable {
   static async insert(noteData: InsertNote): Promise<Note> {
+    console.log('[DEBUG][NotesTable] insert called with:', noteData)
     const newNote: Note = {
       id: uuidv4(),
       ...noteData,
@@ -207,6 +208,7 @@ export class NotesTable {
       updated_at: new Date().toISOString(),
       deleted_at: null,
     }
+    console.log('[DEBUG][NotesTable] inserting newNote:', newNote)
 
     const query = `
             INSERT INTO notes (id, user_id, interaction_id, content, created_at, updated_at, deleted_at)
@@ -223,6 +225,7 @@ export class NotesTable {
     ]
 
     await run(query, params)
+    console.log('[DEBUG][NotesTable] insert SUCCESS')
     return newNote
   }
 
@@ -231,11 +234,14 @@ export class NotesTable {
   }
 
   static async findAll(user_id?: string): Promise<Note[]> {
+    console.log('[DEBUG][NotesTable] findAll called with user_id:', user_id)
     const query = user_id
       ? 'SELECT * FROM notes WHERE user_id = ? AND deleted_at IS NULL ORDER BY created_at DESC'
       : 'SELECT * FROM notes WHERE user_id IS NULL AND deleted_at IS NULL ORDER BY created_at DESC'
     const params = user_id ? [user_id] : []
-    return await all<Note>(query, params)
+    const result = await all<Note>(query, params)
+    console.log('[DEBUG][NotesTable] findAll returning', result.length, 'notes:', result)
+    return result
   }
 
   static async findByInteractionId(interactionId: string): Promise<Note[]> {
@@ -315,6 +321,7 @@ export class DictionaryTable {
   static async insert(
     itemData: InsertDictionaryItem,
   ): Promise<DbResult<DictionaryItem>> {
+    console.log('[DEBUG][DictionaryTable] insert called with:', itemData)
     const newItem: DictionaryItem = {
       id: uuidv4(),
       ...itemData,
@@ -322,6 +329,7 @@ export class DictionaryTable {
       updated_at: new Date().toISOString(),
       deleted_at: null,
     }
+    console.log('[DEBUG][DictionaryTable] inserting newItem:', newItem)
 
     const query = `
             INSERT INTO dictionary_items (id, user_id, word, pronunciation, created_at, updated_at, deleted_at)
@@ -339,18 +347,23 @@ export class DictionaryTable {
 
     try {
       await run(query, params)
+      console.log('[DEBUG][DictionaryTable] insert SUCCESS')
       return { success: true, data: newItem }
     } catch (error: any) {
+      console.error('[DEBUG][DictionaryTable] insert ERROR:', error)
       return handleDictionaryConstraintError(error, newItem.word)
     }
   }
 
   static async findAll(user_id?: string): Promise<DictionaryItem[]> {
+    console.log('[DEBUG][DictionaryTable] findAll called with user_id:', user_id)
     const query = user_id
       ? 'SELECT * FROM dictionary_items WHERE user_id = ? AND deleted_at IS NULL ORDER BY word ASC'
       : 'SELECT * FROM dictionary_items WHERE user_id IS NULL AND deleted_at IS NULL ORDER BY word ASC'
     const params = user_id ? [user_id] : []
-    return await all<DictionaryItem>(query, params)
+    const result = await all<DictionaryItem>(query, params)
+    console.log('[DEBUG][DictionaryTable] findAll returning', result.length, 'items:', result)
+    return result
   }
 
   static async update(

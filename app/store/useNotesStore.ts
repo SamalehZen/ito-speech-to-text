@@ -22,28 +22,34 @@ export const useNotesStore = create<NotesStore>((set, get) => ({
   notes: [],
 
   loadNotes: async () => {
+    console.log('[DEBUG][NotesStore] loadNotes called')
     try {
       const notes = await window.api.notes.getAll()
+      console.log('[DEBUG][NotesStore] loadNotes received notes:', notes?.length, notes)
       set({ notes })
     } catch (error) {
-      console.error('Failed to load notes from database:', error)
+      console.error('[DEBUG][NotesStore] Failed to load notes from database:', error)
     }
   },
 
   addNote: async (content: string) => {
     const { user } = useAuthStore.getState()
+    console.log('[DEBUG][NotesStore] addNote called:', { content, user })
     if (!user) {
-      console.error('Cannot add a note without a logged-in user.')
+      console.error('[DEBUG][NotesStore] Cannot add a note without a logged-in user.')
       return
     }
     try {
-      const newNote = await window.api.notes.add({
+      const noteToAdd = {
         content: content.trim(),
         user_id: user.id,
-      })
+      }
+      console.log('[DEBUG][NotesStore] Calling window.api.notes.add with:', noteToAdd)
+      const newNote = await window.api.notes.add(noteToAdd)
+      console.log('[DEBUG][NotesStore] addNote result:', newNote)
       set(state => ({ notes: [newNote, ...state.notes] }))
     } catch (error) {
-      console.error('Failed to add note to database:', error)
+      console.error('[DEBUG][NotesStore] Failed to add note to database:', error)
     }
   },
 

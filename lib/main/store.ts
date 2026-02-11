@@ -102,6 +102,7 @@ export const createNewAuthState = (): AuthState => {
 
 export const getCurrentUserId = (): string | undefined => {
   const user = store.get(STORE_KEYS.USER_PROFILE) as any
+  console.log('[DEBUG][store] getCurrentUserId called, userProfile:', user, 'returning id:', user?.id)
   return user?.id
 }
 export const getAdvancedSettings = (): AdvancedSettings => {

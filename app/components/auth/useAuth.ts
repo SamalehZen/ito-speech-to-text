@@ -12,7 +12,7 @@ const noopAsync = async () => {}
 const noopAsyncSuccess = async () => ({ success: true as const })
 
 const localUser: AuthUser = {
-  id: 'local-user',
+  id: 'self-hosted',
   email: 'local@ito.app',
   name: 'Local User',
   picture: undefined,
@@ -70,8 +70,24 @@ export function useAuth() {
   }, [supabaseLoading])
 
   useEffect(() => {
+    console.log('[DEBUG][useAuth] useEffect triggered:', {
+      AUTH_DISABLED,
+      hasSession: !!session,
+      hasSupabaseUser: !!supabaseUser,
+      hasAuthUser: !!authUser,
+      storeIsAuthenticated,
+      storedUserId: storedUser?.id,
+    })
+
     if (AUTH_DISABLED) {
       if (!storeIsAuthenticated) {
+        const selfHostedProfile = {
+          id: 'self-hosted',
+          email: undefined,
+          name: 'Self-Hosted User',
+        }
+        console.log('[DEBUG][useAuth] AUTH_DISABLED - calling notifyLoginSuccess with:', selfHostedProfile)
+        window.api.notifyLoginSuccess(selfHostedProfile, null, null)
         setSelfHostedMode()
       }
       return
@@ -81,6 +97,15 @@ export function useAuth() {
       if (storeIsAuthenticated && storedUser?.id === supabaseUser.id) {
         return
       }
+      
+      const profile = {
+        id: supabaseUser.id,
+        email: supabaseUser.email,
+        name: supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0] || 'User',
+      }
+      console.log('[DEBUG][useAuth] Valid session - calling notifyLoginSuccess with profile:', profile)
+      window.api.notifyLoginSuccess(profile, session.access_token, session.access_token)
+      
       const authTokens: AuthTokens = {
         access_token: session.access_token,
         id_token: session.access_token,
@@ -168,6 +193,9 @@ export function useAuth() {
     clearAuth()
     resetMainState()
     resetOnboarding()
+    
+    console.log('[DEBUG][useAuth] Calling logout on main process')
+    window.api.logout()
 
     analytics.track(ANALYTICS_EVENTS.LOGOUT_COMPLETED)
   }, [clearAuth, resetMainState, resetOnboarding])
@@ -232,6 +260,12 @@ export function useAuth() {
   const loginWithSelfHosted = useCallback(async () => {
     if (!supabase) {
       setSelfHostedMode()
+      const selfHostedProfile = {
+        id: 'self-hosted',
+        email: undefined,
+        name: 'Self-Hosted User',
+      }
+      window.api.notifyLoginSuccess(selfHostedProfile, null, null)
     }
   }, [setSelfHostedMode])
 
