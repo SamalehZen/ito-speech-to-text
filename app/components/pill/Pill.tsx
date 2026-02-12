@@ -1,38 +1,33 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Sparkles } from 'lucide-react'
 import { useSettingsStore } from '../../store/useSettingsStore'
 import {
   useOnboardingStore,
   ONBOARDING_CATEGORIES,
 } from '../../store/useOnboardingStore'
-import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip'
-import { X, StopSquare } from '@mynaui/icons-react'
-import { AudioBars } from './contents/AudioBars'
-import { PreviewAudioBars } from './contents/PreviewAudioBars'
-import { LoadingAnimation } from './contents/LoadingAnimation'
-import { useAudioStore } from '@/app/store/useAudioStore'
-import { TooltipButton } from './contents/TooltipButton'
 import { analytics, ANALYTICS_EVENTS } from '../analytics'
 import type {
   RecordingStatePayload,
   ProcessingStatePayload,
 } from '@/lib/types/ipc'
-import { ItoMode } from '@/app/generated/ito_pb'
+import { UIState } from './types'
+import { ItoLogo, WaveformIcon } from './Icons'
 
 const globalStyles = `
   html, body, #app {
     height: 100%;
     margin: 0;
-    overflow: hidden; /* Prevent scrollbars */
+    overflow: hidden;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
 
-    /* These styles are key to anchoring the pill to the bottom center */
-    /* of its transparent window, allowing it to expand upwards. */
     display: flex;
-    align-items: flex-end;
+    align-items: flex-start;
     justify-content: center;
 
     pointer-events: none;
+    background: transparent;
 
     font-family:
       'Inter',
@@ -47,20 +42,7 @@ const globalStyles = `
 
 const BAR_UPDATE_INTERVAL = 64
 
-// Color mapping for different recording modes
-const getAudioBarColor = (mode: ItoMode | undefined): string => {
-  switch (mode) {
-    case ItoMode.TRANSCRIBE:
-      return 'white'
-    case ItoMode.EDIT:
-      return '#FFCF40'
-    default:
-      return 'white' // Default to white for transcribe mode
-  }
-}
-
-const Pill = () => {
-  // Get initial values from store using separate selectors to avoid infinite re-renders
+const DynamicNotch: React.FC = () => {
   const initialShowItoBarAlways = useSettingsStore(
     state => state.showItoBarAlways,
   )
@@ -70,14 +52,9 @@ const Pill = () => {
   const initialOnboardingCompleted = useOnboardingStore(
     state => state.onboardingCompleted,
   )
-  const { startRecording, stopRecording } = useAudioStore()
 
   const [isRecording, setIsRecording] = useState(false)
-  const [isManualRecording, setIsManualRecording] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
-  const [isHovered, setIsHovered] = useState(false)
-  const [recordingMode, setRecordingMode] = useState<ItoMode | undefined>()
-  const isManualRecordingRef = useRef(false)
   const [showItoBarAlways, setShowItoBarAlways] = useState(
     initialShowItoBarAlways,
   )
@@ -87,41 +64,29 @@ const Pill = () => {
   const [onboardingCompleted, setOnboardingCompleted] = useState(
     initialOnboardingCompleted,
   )
-  // Fixed size array of volume values to be used for the audio bars, size is 21
   const [volumeHistory, setVolumeHistory] = useState<number[]>([])
-  const [lastVolumeUpdate, setLastVolumeUpdate] = useState(0)
+  const lastVolumeUpdateRef = useRef(0)
 
   useEffect(() => {
-    // Listen for recording state changes from the main process
     const unsubRecording = window.api.on(
       'recording-state-update',
       (state: RecordingStatePayload) => {
-        // Update recording state - this is for global hotkey triggered recording
         setIsRecording(state.isRecording)
-        setRecordingMode(state.mode ?? recordingMode)
 
-        // Only track general recording analytics if it's not a manual recording
-        if (!isManualRecordingRef.current) {
-          const analyticsEvent = state.isRecording
-            ? ANALYTICS_EVENTS.RECORDING_STARTED
-            : ANALYTICS_EVENTS.RECORDING_COMPLETED
-          analytics.track(analyticsEvent, {
-            is_recording: state.isRecording,
-            mode: state.mode,
-          })
-        }
+        const analyticsEvent = state.isRecording
+          ? ANALYTICS_EVENTS.RECORDING_STARTED
+          : ANALYTICS_EVENTS.RECORDING_COMPLETED
+        analytics.track(analyticsEvent, {
+          is_recording: state.isRecording,
+          mode: state.mode,
+        })
 
-        // If global recording stops, also stop manual recording
         if (!state.isRecording) {
-          setIsManualRecording(false)
-          isManualRecordingRef.current = false
-          // Only clear volume history when recording stops
           setVolumeHistory([])
         }
       },
     )
 
-    // Listen for processing state changes from the main process
     const unsubProcessing = window.api.on(
       'processing-state-update',
       (state: ProcessingStatePayload) => {
@@ -129,28 +94,25 @@ const Pill = () => {
       },
     )
 
-    // Listen for volume updates from the main process
     const unsubVolume = window.api.on('volume-update', (vol: number) => {
-      // throttle the volume updates to 80ms
       const now = Date.now()
-      if (now - lastVolumeUpdate < BAR_UPDATE_INTERVAL) {
+      if (now - lastVolumeUpdateRef.current < BAR_UPDATE_INTERVAL) {
         return
       }
-      const newVolumeHistory = [...volumeHistory, vol]
-      if (newVolumeHistory.length > 42) {
-        newVolumeHistory.shift()
-      }
-      setVolumeHistory(newVolumeHistory)
-      setLastVolumeUpdate(now)
+      setVolumeHistory(prev => {
+        const newHistory = [...prev, vol]
+        if (newHistory.length > 42) {
+          newHistory.shift()
+        }
+        return newHistory
+      })
+      lastVolumeUpdateRef.current = now
     })
 
-    // Listen for settings updates from the main process
     const unsubSettings = window.api.on('settings-update', (settings: any) => {
-      // Update local state with the new setting
       setShowItoBarAlways(settings.showItoBarAlways)
     })
 
-    // Listen for onboarding updates from the main process
     const unsubOnboarding = window.api.on(
       'onboarding-update',
       (onboarding: any) => {
@@ -159,7 +121,6 @@ const Pill = () => {
       },
     )
 
-    // Listen for user auth updates from the main process
     const unsubUserAuth = window.api.on('user-auth-update', (authUser: any) => {
       if (authUser) {
         analytics.identifyUser(
@@ -173,12 +134,10 @@ const Pill = () => {
           authUser.provider,
         )
       } else {
-        // User logged out
         analytics.resetUser()
       }
     })
 
-    // Cleanup listeners when the component unmounts
     return () => {
       unsubRecording()
       unsubProcessing()
@@ -187,184 +146,104 @@ const Pill = () => {
       unsubOnboarding()
       unsubUserAuth()
     }
-  }, [volumeHistory, lastVolumeUpdate, recordingMode])
+  }, [])
 
-  // Define dimensions for different states
-  const idleWidth = 36
-  const idleHeight = 8
-  const hoveredWidth = 84
-  const hoveredHeight = 32
-  const recordingWidth = 84
-  const recordingHeight = 32
-  const manualRecordingWidth = 112
-  const manualRecordingHeight = 32
-  const processingWidth = 84
-  const processingHeight = 32
+  const uiState = isProcessing
+    ? UIState.THINKING
+    : isRecording
+      ? UIState.LISTENING
+      : UIState.IDLE
 
-  // Determine current state
-  const anyRecording = isRecording || isManualRecording
+  const { width, height } = useMemo(() => {
+    if (uiState === UIState.LISTENING || uiState === UIState.THINKING) {
+      return { width: 360, height: 46 }
+    }
+    return { width: 200, height: 46 }
+  }, [uiState])
+
+  const isOnboarded =
+    onboardingCategory === ONBOARDING_CATEGORIES.TRY_IT || onboardingCompleted
+
   const shouldShow =
-    (onboardingCategory === ONBOARDING_CATEGORIES.TRY_IT ||
-      onboardingCompleted) &&
-    (anyRecording || isProcessing || showItoBarAlways || isHovered)
+    isOnboarded && (isRecording || isProcessing || showItoBarAlways)
 
-  // Calculate dimensions based on state
-  let currentWidth = idleWidth
-  let currentHeight = idleHeight
-  let backgroundColor = 'rgba(128, 128, 128, 0.65)'
-
-  if (isManualRecording) {
-    currentWidth = manualRecordingWidth
-    currentHeight = manualRecordingHeight
-    backgroundColor = '#000000'
-  } else if (anyRecording) {
-    currentWidth = recordingWidth
-    currentHeight = recordingHeight
-    backgroundColor = '#000000'
-  } else if (isProcessing) {
-    currentWidth = processingWidth
-    currentHeight = processingHeight
-    backgroundColor = '#000000'
-  } else if (isHovered) {
-    currentWidth = hoveredWidth
-    currentHeight = hoveredHeight
-    backgroundColor = '#404040'
-  }
-
-  // A single, unified style for the pill. Its properties will be
-  // smoothly transitioned by CSS.
   const pillStyle: React.CSSProperties = {
-    // Flex properties to center the content inside
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-
-    // Dynamic styles that change based on the state
-    width: `${currentWidth}px`,
-    height: `${currentHeight}px`,
-    backgroundColor,
-    border: '1px solid #A9A9A9',
-
-    // Show/hide animation using opacity and scale instead of display none/flex
-    opacity: shouldShow ? 1 : 0,
-    transform: shouldShow ? 'scale(1)' : 'scale(0.8)',
-    transformOrigin: 'bottom center',
-    visibility: shouldShow ? 'visible' : 'hidden',
-
-    // Static styles
-    borderRadius: '21px',
-    boxSizing: 'border-box',
+    position: 'relative',
+    width: `${width}px`,
+    height: `${height}px`,
+    background: 'linear-gradient(to bottom, #000000, #141414)',
+    boxShadow:
+      '0 10px 30px rgba(0,0,0,0.8), inset 0 -1px 0 rgba(255,255,255,0.15), inset 0 -8px 12px rgba(255,255,255,0.02)',
+    border: '1px solid rgba(255,255,255,0.05)',
+    borderTop: 'none',
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
+    borderBottomLeftRadius: '20px',
+    borderBottomRightRadius: '20px',
     overflow: 'hidden',
-
-    // Enable pointer events for this element
-    pointerEvents: 'auto',
-    cursor: isHovered && !anyRecording ? 'pointer' : 'default',
-
-    // The transition property makes the magic happen!
-    // We animate width, height, color, opacity, and scale changes over 0.3 seconds.
-    transition:
-      'width 0.3s ease, height 0.3s ease, background-color 0.3s ease, opacity 0.3s ease, transform 0.3s ease, visibility 0.3s ease',
+    backdropFilter: 'blur(40px) saturate(1.5)',
+    WebkitBackdropFilter: 'blur(40px) saturate(1.5)',
+    pointerEvents: shouldShow ? 'auto' : 'none',
+    opacity: shouldShow ? 1 : 0,
+    transform: shouldShow ? 'scale(1) translateY(0)' : 'scale(0.9) translateY(-10px)',
+    transition: 'width 0.3s ease, height 0.3s ease, opacity 0.3s ease, transform 0.3s ease',
   }
 
-  // Handle mouse enter - enable mouse events for the pill window and set hover state
-  const handleMouseEnter = () => {
-    setIsHovered(true)
-    if (window.api?.setPillMouseEvents) {
-      window.api.setPillMouseEvents(false) // Enable mouse events
-    }
-  }
-
-  // Handle mouse leave - disable mouse events (with forwarding) for the pill window and clear hover state
-  const handleMouseLeave = () => {
-    setIsHovered(false)
-    if (window.api?.setPillMouseEvents) {
-      window.api.setPillMouseEvents(true, { forward: true }) // Disable mouse events but keep forwarding
-    }
-  }
-
-  // Handle click to start manual recording
-  const handleClick = () => {
-    if (isHovered && !anyRecording) {
-      setIsManualRecording(true)
-      isManualRecordingRef.current = true
-      // Trigger recording start via IPC
-      startRecording()
-
-      analytics.track(ANALYTICS_EVENTS.MANUAL_RECORDING_STARTED, {
-        is_recording: true,
-      })
-    }
-  }
-
-  // Handle cancel recording
-  const handleCancel = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    setIsManualRecording(false)
-    stopRecording()
-
-    analytics.track(ANALYTICS_EVENTS.MANUAL_RECORDING_ABANDONED, {
-      is_recording: false,
-    })
-  }
-
-  // Handle stop recording
-  const handleStop = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    setIsManualRecording(false)
-    stopRecording()
-
-    analytics.track(ANALYTICS_EVENTS.MANUAL_RECORDING_COMPLETED, {
-      is_recording: false,
-    })
-  }
-
-  const renderContent = () => {
-    if (isManualRecording) {
+  const renderStateIndicator = () => {
+    if (uiState === UIState.IDLE) {
       return (
         <div
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            width: '100%',
-            justifyContent: 'space-between',
-            padding: '0 8px',
+            width: '8px',
+            height: '8px',
+            borderRadius: '50%',
+            backgroundColor: 'rgba(255,255,255,0.2)',
           }}
-        >
-          <TooltipButton
-            onClick={handleCancel}
-            icon={<X width={14} height={14} color="white" />}
-            tooltip="Cancel"
-          />
-
-          <AudioBars
-            volumeHistory={volumeHistory}
-            barColor={getAudioBarColor(recordingMode)}
-          />
-
-          <TooltipButton
-            onClick={handleStop}
-            icon={<StopSquare width={14} height={14} color="#ef4444" />}
-            tooltip="Stop and paste"
-          />
-        </div>
-      )
-    }
-
-    if (anyRecording) {
-      return (
-        <AudioBars
-          volumeHistory={volumeHistory}
-          barColor={getAudioBarColor(recordingMode)}
         />
       )
     }
 
-    if (isProcessing) {
-      return <LoadingAnimation color={getAudioBarColor(recordingMode)} />
+    if (uiState === UIState.LISTENING) {
+      return <WaveformIcon volumeHistory={volumeHistory} />
     }
 
-    if (isHovered) {
-      return <PreviewAudioBars />
+    if (uiState === UIState.THINKING) {
+      return (
+        <motion.div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+          }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+        >
+          <motion.div
+            animate={{ rotate: 360, scale: [1, 1.1, 1] }}
+            transition={{
+              rotate: { repeat: Infinity, duration: 3, ease: 'linear' },
+              scale: { repeat: Infinity, duration: 2 },
+            }}
+          >
+            <Sparkles
+              style={{ width: '16px', height: '16px', color: '#007AFF' }}
+              fill="currentColor"
+            />
+          </motion.div>
+          <span
+            style={{
+              fontSize: '14px',
+              fontWeight: 500,
+              color: '#007AFF',
+            }}
+          >
+            Thinking
+          </span>
+        </motion.div>
+      )
     }
 
     return null
@@ -373,36 +252,55 @@ const Pill = () => {
   return (
     <>
       <style>{globalStyles}</style>
-      <Tooltip>
-        <TooltipTrigger asChild>
+      <div style={pillStyle}>
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '0 20px',
+          }}
+        >
           <div
-            style={pillStyle}
-            onClick={handleClick}
-            onMouseEnter={handleMouseEnter}
-            onMouseLeave={handleMouseLeave}
-          >
-            {renderContent()}
-          </div>
-        </TooltipTrigger>
-        {isHovered && !anyRecording && (
-          <TooltipContent
-            side="top"
             style={{
-              backgroundColor: 'rgba(0, 0, 0, 0.8)',
-              color: 'white',
-              padding: '6px 8px',
-              fontSize: '14px',
-              marginBottom: '6px',
-              borderRadius: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              flexShrink: 0,
             }}
-            className="border-none rounded-md"
           >
-            Click and start speaking
-          </TooltipContent>
-        )}
-      </Tooltip>
+            <ItoLogo className="w-6 h-6" />
+            <span
+              style={{
+                fontSize: '14px',
+                fontWeight: 600,
+                letterSpacing: '0.025em',
+                color: 'white',
+              }}
+            >
+              Ito
+            </span>
+          </div>
+
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={uiState}
+              initial={{ opacity: 0, x: 10 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -10 }}
+              transition={{ duration: 0.2 }}
+            >
+              {renderStateIndicator()}
+            </motion.div>
+          </AnimatePresence>
+        </div>
+      </div>
     </>
   )
 }
 
-export default Pill
+export default DynamicNotch
