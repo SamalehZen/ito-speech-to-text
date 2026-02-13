@@ -29,11 +29,15 @@ import { voiceInputService } from './voiceInputService'
 import { initializeMicrophoneSelection } from '../media/microphoneSetUp'
 import { validateStoredTokens, ensureValidTokens } from '../auth/events'
 import { createAppTray } from './tray'
-import { itoSessionManager } from './itoSessionManager'
 import { initializeAutoUpdater } from './autoUpdaterWrapper'
 import { teardown } from './teardown'
 import { ITO_ENV } from './env'
-import { startServerKeepAlive, stopServerKeepAlive } from './serverKeepAlive'
+import {
+  startServerKeepAlive,
+  stopServerKeepAlive,
+  onAppFocused,
+  onAppBlurred,
+} from './serverKeepAlive'
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -157,6 +161,14 @@ app.whenReady().then(async () => {
     teardown()
   })
 
+  app.on('browser-window-focus', () => {
+    onAppFocused()
+  })
+
+  app.on('browser-window-blur', () => {
+    onAppBlurred()
+  })
+
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })
@@ -165,7 +177,7 @@ app.whenReady().then(async () => {
   initializeAutoUpdater()
 
   // Set up periodic token refresh check (every 10 minutes)
-  setInterval(
+  const tokenRefreshTimer = setInterval(
     async () => {
       try {
         await ensureValidTokens()
@@ -174,7 +186,11 @@ app.whenReady().then(async () => {
       }
     },
     10 * 60 * 1000,
-  ) // Check every 10 minutes
+  )
+
+  app.on('will-quit', () => {
+    clearInterval(tokenRefreshTimer)
+  })
 })
 
 app.on('window-all-closed', () => {

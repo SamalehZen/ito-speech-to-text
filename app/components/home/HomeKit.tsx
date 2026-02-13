@@ -2,6 +2,7 @@ import {
   Home,
   BookOpen,
   FileText,
+  Sparkles,
   CogFour,
   InfoCircle,
 } from '@mynaui/icons-react'
@@ -19,6 +20,7 @@ import DictionaryContent from './contents/DictionaryContent'
 import NotesContent from './contents/NotesContent'
 import SettingsContent from './contents/SettingsContent'
 import AboutContent from './contents/AboutContent'
+import AppStylingContent from './contents/AppStylingContent'
 
 export default function HomeKit() {
   const { navExpanded, currentPage, setCurrentPage } = useMainStore()
@@ -166,6 +168,8 @@ export default function HomeKit() {
         return <DictionaryContent />
       case 'notes':
         return <NotesContent />
+      case 'app-styling':
+        return <AppStylingContent />
       case 'settings':
         return <SettingsContent />
       case 'about':
@@ -223,6 +227,13 @@ export default function HomeKit() {
               isActive={currentPage === 'notes'}
               showText={showText}
               onClick={() => setCurrentPage('notes')}
+            />
+            <NavItem
+              icon={<Sparkles className="w-5 h-5" />}
+              label="App Styling"
+              isActive={currentPage === 'app-styling'}
+              showText={showText}
+              onClick={() => setCurrentPage('app-styling')}
             />
             <NavItem
               icon={<CogFour className="w-5 h-5" />}
