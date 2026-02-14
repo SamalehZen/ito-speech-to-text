@@ -410,10 +410,6 @@ export class TranscribeStreamV2Handler {
     const hasTonePrompt =
       windowContext.tonePrompt && windowContext.tonePrompt.trim() !== ''
 
-    if (mode !== ItoMode.EDIT && !hasTonePrompt) {
-      return transcript
-    }
-
     const systemPrompt = hasTonePrompt
       ? windowContext.tonePrompt
       : ITO_MODE_SYSTEM_PROMPT[mode]
