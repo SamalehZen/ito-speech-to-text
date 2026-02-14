@@ -27,7 +27,10 @@ export function createUserPromptWithContext(
   let contextPrompt = ''
   if (context) {
     if (context.userDetailsContext) {
+      console.log('[Helpers] Including user details in prompt context')
       contextPrompt += `\n${START_USER_DETAILS_MARKER}\n${context.userDetailsContext}\n${END_USER_DETAILS_MARKER}`
+    } else {
+      console.log('[Helpers] No user details context available - signature will not include name/occupation')
     }
     if (context.windowTitle) {
       contextPrompt += `\n${START_WINDOW_TITLE_MARKER}\n${context.windowTitle}\n${END_WINDOW_TITLE_MARKER}`

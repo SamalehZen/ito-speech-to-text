@@ -19,7 +19,6 @@ import {
   detectItoMode,
   getPromptForMode,
 } from './helpers.js'
-import { ITO_MODE_SYSTEM_PROMPT } from './constants.js'
 import type { ItoContext } from './types.js'
 import { isAbortError, createAbortError } from '../../utils/abortUtils.js'
 import {
@@ -410,25 +409,26 @@ export class TranscribeStreamV2Handler {
     const hasTonePrompt =
       windowContext.tonePrompt && windowContext.tonePrompt.trim() !== ''
 
-    if (mode !== ItoMode.EDIT && !hasTonePrompt) {
-      return transcript
-    }
+    const basePrompt = getPromptForMode(mode, advancedSettings)
 
-    const userPromptPrefix = getPromptForMode(
-      mode,
-      advancedSettings,
-      windowContext.tonePrompt,
-    )
+    const systemPrompt = hasTonePrompt
+      ? windowContext.tonePrompt
+      : basePrompt
+
     const userPrompt = createUserPromptWithContext(transcript, windowContext)
     const llmProvider = getLlmProvider(advancedSettings.llmProvider)
+
+    console.log(
+      `[TranscribeStreamV2] LLM call - system prompt source: ${hasTonePrompt ? 'tonePrompt' : 'basePrompt'}, has user details: ${!!windowContext.userDetailsContext}`,
+    )
 
     const adjustedTranscript = await serverTimingCollector.timeAsync(
       ServerTimingEventName.LLM_ADJUSTMENT,
       () =>
-        llmProvider.adjustTranscript(userPromptPrefix + '\n' + userPrompt, {
+        llmProvider.adjustTranscript(userPrompt, {
           temperature: advancedSettings.llmTemperature,
           model: advancedSettings.llmModel,
-          prompt: ITO_MODE_SYSTEM_PROMPT[mode],
+          prompt: systemPrompt,
         }),
     )
 
@@ -442,8 +442,15 @@ export class TranscribeStreamV2Handler {
   private buildUserDetailsContext(
     userDetails: UserDetailsInfo | undefined,
   ): string {
-    if (!userDetails) return ''
-    if (!userDetails.fullName && !userDetails.occupation) return ''
+    if (!userDetails) {
+      console.log('[TranscribeStreamV2] No user details provided in stream config')
+      return ''
+    }
+    if (!userDetails.fullName && !userDetails.occupation) {
+      console.log('[TranscribeStreamV2] User details present but fullName and occupation are both empty')
+      return ''
+    }
+    console.log(`[TranscribeStreamV2] Building user details context - Name: "${userDetails.fullName}", Occupation: "${userDetails.occupation}"`)
 
     const lines: string[] = []
 
