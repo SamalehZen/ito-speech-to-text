@@ -414,13 +414,21 @@ export class TranscribeStreamV2Handler {
       return transcript
     }
 
+    const systemPrompt = hasTonePrompt
+      ? windowContext.tonePrompt
+      : ITO_MODE_SYSTEM_PROMPT[mode]
+
     const userPromptPrefix = getPromptForMode(
       mode,
       advancedSettings,
-      windowContext.tonePrompt,
+      hasTonePrompt ? undefined : windowContext.tonePrompt,
     )
     const userPrompt = createUserPromptWithContext(transcript, windowContext)
     const llmProvider = getLlmProvider(advancedSettings.llmProvider)
+
+    console.log(
+      `[TranscribeStreamV2] LLM call - system prompt source: ${hasTonePrompt ? 'tonePrompt' : 'default'}, has user details: ${!!windowContext.userDetailsContext}`,
+    )
 
     const adjustedTranscript = await serverTimingCollector.timeAsync(
       ServerTimingEventName.LLM_ADJUSTMENT,
@@ -428,7 +436,7 @@ export class TranscribeStreamV2Handler {
         llmProvider.adjustTranscript(userPromptPrefix + '\n' + userPrompt, {
           temperature: advancedSettings.llmTemperature,
           model: advancedSettings.llmModel,
-          prompt: ITO_MODE_SYSTEM_PROMPT[mode],
+          prompt: systemPrompt,
         }),
     )
 
