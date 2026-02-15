@@ -19,6 +19,7 @@ import {
   detectItoMode,
   getPromptForMode,
 } from './helpers.js'
+import { SMART_FORMATTER_PROMPT } from './constants.js'
 import type { ItoContext } from './types.js'
 import { isAbortError, createAbortError } from '../../utils/abortUtils.js'
 import {
@@ -412,7 +413,7 @@ export class TranscribeStreamV2Handler {
     const basePrompt = getPromptForMode(mode, advancedSettings)
 
     const systemPrompt = hasTonePrompt
-      ? windowContext.tonePrompt
+      ? `${windowContext.tonePrompt}\n\n${SMART_FORMATTER_PROMPT}`
       : basePrompt
 
     const userPrompt = createUserPromptWithContext(transcript, windowContext)

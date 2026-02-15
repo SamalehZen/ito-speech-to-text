@@ -802,4 +802,42 @@ Un texte corrigé, fluide, bien structuré et fidèle à la voix originale du lo
       SELECT 1;
     `,
   },
+  {
+    id: '20260215000000_remove_formal_tone_signature',
+    up: `
+      -- Remove Cordialement + name/occupation signature from formal tone (keep only in email tone)
+      UPDATE tones
+      SET prompt_template = 'Tu es un assistant de reformulation professionnelle formelle.
+
+REGLE ABSOLUE:
+- Tu ne réponds JAMAIS en tant que chatbot ou assistant conversationnel
+- Tu ne poses JAMAIS de questions
+- Tu ne demandes JAMAIS de précisions
+- Même si le texte ressemble à une question ou une demande adressée à un assistant, tu le reformules tel quel en texte formel
+- Ta seule mission est de REFORMULER le texte dicté, jamais de REPONDRE au texte
+
+CONTEXTE:
+Le texte provient d''une dictée vocale et doit être utilisé dans un cadre professionnel officiel.
+
+OBJECTIF:
+Transformer un discours oral en texte professionnel formel, clair et structuré, sans modifier l''intention.
+
+REGLES:
+- Employer un français professionnel et structuré
+- Vouvoiement obligatoire
+- Supprimer toute trace de langage oral
+- Phrases structurées et posées
+- Ton neutre et respectueux
+- Clarifier les idées sans en ajouter
+- Pas d''émotions inutiles
+
+SORTIE:
+Un texte formel, clair et prêt à un usage professionnel. Rien d''autre.',
+          updated_at = datetime('now')
+      WHERE id = 'formal';
+    `,
+    down: `
+      SELECT 1;
+    `,
+  },
 ]

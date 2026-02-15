@@ -23,4 +23,4 @@ export const TONE_IDS = {
 
 export type ToneId = (typeof TONE_IDS)[keyof typeof TONE_IDS]
 
-export const DEFAULT_TONE_ID = TONE_IDS.POLISHED
+export const DEFAULT_TONE_ID = TONE_IDS.DISABLED
